@@ -233,6 +233,133 @@ var TibianLogic = (function () {
     };
   }
 
+  /* ---------------- رسائل الحجوزات (لوحة الإدارة) ---------------- */
+
+  /** نص بيانات التحويل البنكي من الإعدادات */
+  function bankText(s) {
+    s = s || {};
+    var lines = [
+      s.bank_name && ('البنك: ' + s.bank_name),
+      s.bank_account_name && ('اسم الحساب: ' + s.bank_account_name),
+      s.bank_account_no && ('رقم الحساب: ' + s.bank_account_no),
+      s.bank_iban && ('IBAN: ' + s.bank_iban)
+    ].filter(Boolean);
+    return lines.length ? lines.join('\n') : '(نرسل لكم بيانات التحويل في رسالة منفصلة)';
+  }
+
+  /**
+   * كل متغيرات قوالب ورقة «الرسائل» لحجز معيّن.
+   * ctx: { s: الإعدادات, tiers: فئات الأسعار }
+   */
+  function bookingVars(b, ctx, extra) {
+    var s = (ctx && ctx.s) || {};
+    var t = findTier(ctx && ctx.tiers, b.guests) || {};
+    var dinner = b.package === 'comprehensive' ? (b.dinner || '') : '';
+    var travel = Number(b.travelFee) || 0;
+    var v = {
+      'رقم_الحجز': b.id, 'الاسم': b.name, 'المناسبة': b.occasion,
+      'الباقة': PKG[b.package] ? PKG[b.package].ar : (b.package || ''),
+      'عدد_الضيوف': b.guests, 'الفئة': b.tier || (t.from ? tierLabel(t) : b.guests),
+      'المضيفين': t.hosts || '', 'المشرفين': t.supervisors || '', 'الفخارات': t.jars || '',
+      'التاريخ': arDate(b.date), 'الوقت': b.time || '', 'المكان': b.location || '—',
+      'العشاء': dinner || 'يُحدد لاحقًا', 'سطر_العشاء': dinner ? 'خيار العشاء: ' + dinner + '\n' : '',
+      'السعر': fmtMoney(b.price), 'المواصلات': fmtMoney(travel),
+      'سطر_المواصلات': travel > 0 ? '\nشامل رسوم المواصلات: ' + fmtMoney(travel) + ' ر.ع' : '',
+      'الإجمالي': fmtMoney(b.total), 'العربون': fmtMoney(b.deposit), 'نسبة_العربون': s.deposit_percent || 50,
+      'المدفوع': fmtMoney(b.paid), 'المتبقي': fmtMoney(b.balance),
+      'موعد_المتبقي': b.date ? arDate(balanceDueDate(b.date, s.balance_days_before)) : '',
+      'رقم_الفاتورة': b.invoiceNo || '', 'رابط_الفاتورة': b.invoiceUrl || '(نرسلها لكم قريبًا)',
+      'بيانات_البنك': bankText(s),
+      'محل_التجهيز': s.groom_shop_name || '(اسم المحل)', 'موقع_المحل': s.groom_shop_map || '',
+      'إنستغرام': s.instagram || ''
+    };
+    if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) v[k] = extra[k];
+    return v;
+  }
+
+  /** مفتاح القالب الفعلي: «quote» يصبح عرض الباقة المناسبة */
+  function templateKey(key, b) {
+    if (key === 'quote') return b.package === 'comprehensive' ? 'quote_comprehensive' : 'quote_hospitality';
+    return key;
+  }
+
+  /** الرسائل التي فيها مبالغ مالية — لا يرسلها الموظف */
+  var MONEY_MESSAGES = ['booking_confirmed', 'send_invoice', 'balance_reminder'];
+
+  /** ما يحدث للحجز بعد إرسال رسالة (الحالة وموعد المتابعة) */
+  function afterMessage(b, key, todayYmd, followupDays) {
+    var out = { lastMsg: key };
+    if (key === 'quote_hospitality' || key === 'quote_comprehensive') {
+      if (b.status === STATUS.NEW || b.status === STATUS.SPECIAL) out.status = STATUS.QUOTED;
+      out.nextFollowUp = addDays(todayYmd, followupDays == null ? 2 : followupDays);
+    } else if (key === 'followup') {
+      out.nextFollowUp = addDays(todayYmd, followupDays == null ? 2 : followupDays);
+    } else if (key === 'thank_you' && BOOKED.indexOf(b.status) >= 0) {
+      out.status = STATUS.DONE;
+    }
+    return out;
+  }
+
+  /* ---------------- لوحة الإدارة: قوائم اليوم والإحصائيات ---------------- */
+
+  /** هل أُرسلت هذه الرسالة اليوم؟ (لإظهار ✓ بجانب المهمة) */
+  function sentToday(b, key, todayYmd) {
+    return b.lastMsg === key && String(b.lastContact || '').slice(0, 10) === todayYmd;
+  }
+
+  /**
+   * all: كل الحجوزات · opts: { balanceDays, holidays:[{date,name}] }
+   */
+  function dashboard(all, todayYmd, opts) {
+    opts = opts || {};
+    var balDays = Number(opts.balanceDays == null ? 7 : opts.balanceDays);
+    var tomorrow = addDays(todayYmd, 1), yesterday = addDays(todayYmd, -1), soon = addDays(todayYmd, 3), week = addDays(todayYmd, 7);
+    var byDate = function (a, c) { return a.date < c.date ? -1 : a.date > c.date ? 1 : 0; };
+    var booked = function (b) { return BOOKED.indexOf(b.status) >= 0; };
+    var res = {
+      newInquiries: all.filter(function (b) { return b.status === STATUS.NEW || b.status === STATUS.SPECIAL; })
+        .sort(function (a, c) { return a.created < c.created ? 1 : -1; }),
+      followUps: all.filter(function (b) { return b.status === STATUS.QUOTED && b.nextFollowUp && b.nextFollowUp <= todayYmd; }).sort(byDate),
+      balanceDue: all.filter(function (b) {
+        return b.status === STATUS.CONFIRMED && Number(b.balance) > 0 && b.date >= todayYmd && balanceDueDate(b.date, balDays) <= soon;
+      }).sort(byDate),
+      tomorrow: all.filter(function (b) { return booked(b) && b.date === tomorrow; }),
+      yesterday: all.filter(function (b) { return booked(b) && b.date === yesterday; }),
+      week: all.filter(function (b) { return booked(b) && b.date >= todayYmd && b.date <= week; }).sort(byDate),
+      greetings: (opts.holidays || []).filter(function (h) { return h.date >= todayYmd && h.date <= soon; }),
+      stats: monthStats(all, todayYmd)
+    };
+    return res;
+  }
+
+  function monthStats(all, todayYmd) {
+    var ym = todayYmd.slice(0, 7);
+    var created = all.filter(function (b) { return String(b.created).slice(0, 7) === ym; });
+    var confirmed = all.filter(function (b) { return String(b.bookedOn || '').slice(0, 7) === ym && b.status !== STATUS.CANCELLED; });
+    var upcoming = all.filter(function (b) { return b.date >= todayYmd && BOOKED.indexOf(b.status) >= 0; });
+    return {
+      inquiries: created.length,
+      confirmed: confirmed.length,
+      conversion: created.length ? Math.round(confirmed.length / created.length * 100) : 0,
+      outstanding: round3(upcoming.reduce(function (a, b) { return a + (Number(b.balance) || 0); }, 0)),
+      bookedValue: round3(confirmed.reduce(function (a, b) { return a + (Number(b.total) || 0); }, 0))
+    };
+  }
+
+  /** عملاء التهنئة: رقم واحد لكل عميل (بدون تكرار)، ويُستبعد من أُرسلت له تهنئة نفس المناسبة */
+  function greetingList(all, alreadySent) {
+    var seen = {}, sent = {};
+    (alreadySent || []).forEach(function (p) { sent[normPhone(p)] = true; });
+    var out = [];
+    all.forEach(function (b) {
+      var p = normPhone(b.phone);
+      if (!p || seen[p] || b.status === STATUS.CANCELLED) return;
+      seen[p] = true;
+      out.push({ id: b.id, name: b.name, phone: p, sent: !!sent[p] });
+    });
+    return out;
+  }
+
   return {
     STATUS: STATUS, BOOKED: BOOKED, OPEN: OPEN, PKG: PKG, DINNER: DINNER,
     round3: round3, fmtMoney: fmtMoney, depositOf: depositOf,
@@ -241,7 +368,9 @@ var TibianLogic = (function () {
     tierLabel: tierLabel, findTier: findTier, findArea: findArea, travelApplies: travelApplies, quote: quote,
     countOnDate: countOnDate, fullDates: fullDates,
     applyPayment: applyPayment, isRefundable: isRefundable, balanceDueDate: balanceDueDate,
-    fill: fill, composeLocation: composeLocation, requestVars: requestVars
+    fill: fill, composeLocation: composeLocation, requestVars: requestVars,
+    bankText: bankText, bookingVars: bookingVars, templateKey: templateKey, MONEY_MESSAGES: MONEY_MESSAGES,
+    afterMessage: afterMessage, sentToday: sentToday, dashboard: dashboard, monthStats: monthStats, greetingList: greetingList
   };
 })();
 
