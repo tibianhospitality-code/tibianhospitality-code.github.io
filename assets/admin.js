@@ -534,11 +534,35 @@
       '<div class="h2">شروط الحجز</div><div class="card pad">' + f('terms_ar', 'بالعربية (كل سطر شرط)', 'area') + f('terms_en', 'بالإنجليزية', 'area') + '</div>' +
       '<div id="setMsg"></div><button class="btn btn-dark btn-block" style="margin-top:12px" data-act="saveSettings">حفظ الإعدادات</button>' +
       '<div class="h2">الأتمتة</div><div class="card pad" id="autoBox"><p class="muted small" style="margin:0">جارٍ التحقق…</p></div>' +
+      '<div class="h2">Asana</div><div class="card pad" id="asanaBox"></div>' +
       '<div class="h2">روابط</div><div class="card pad actions"><a class="btn" href="' + SHEET_URL + '" target="_blank" rel="noopener">فتح جدول البيانات</a><a class="btn" href="' + SITE_URL + '" target="_blank" rel="noopener">صفحة العميل</a></div>' +
       '<p class="hint" style="margin-top:10px">الأسعار والمواصلات وأنواع المناسبات ونصوص الرسائل تُعدّل من جدول البيانات مباشرة، وتظهر فورًا.</p>' +
       '</div><button class="btn btn-block" style="margin-top:16px" data-act="logout">تسجيل الخروج</button>';
     shell('الإعدادات', body);
-    if (!S.data.mustChangePin) loadAutomation('status');
+    if (!S.data.mustChangePin) { loadAutomation('status'); if (S.data.asanaConnected) loadAsana('status'); else asanaForm(); }
+  }
+  function asanaForm(msg) {
+    var box = $('asanaBox'); if (!box) return;
+    box.innerHTML = (msg || '') +
+      '<p class="small" style="margin-top:0">عند تأكيد أي حجز تُنشأ مهمة في Asana بتاريخ المناسبة، وتتحدث عند تغيير التاريخ أو التفاصيل، وتُغلق عند الإلغاء أو اكتمال المناسبة. لا تُرسل المبالغ إلى Asana.</p>' +
+      '<div class="field"><label for="asTok">رمز Asana (Personal Access Token)</label><input class="input" id="asTok" type="password" dir="ltr" autocomplete="off" placeholder="' + (S.data.asanaConnected ? 'محفوظ — اتركه فارغًا للإبقاء عليه' : '2/1200…') + '"><div class="hint">من Asana: صورتك ← Settings ← Apps ← Developer apps ← Create new token. يُحفظ في الخادم فقط ولا يظهر هنا مرة أخرى.</div></div>' +
+      '<div class="field"><label for="asProj">رابط المشروع أو رقمه</label><input class="input" id="asProj" dir="ltr" autocomplete="off" value="' + esc(S.data.settings.asana_project_id || '') + '" placeholder="1209…"><div class="hint">افتح المشروع في Asana وانسخ الرابط من شريط العنوان والصقه هنا.</div></div>' +
+      '<button class="btn btn-dark btn-block" data-act="asanaSave">حفظ واختبار الاتصال</button>';
+  }
+  function loadAsana(action, extra) {
+    var box = $('asanaBox'); if (!box) return;
+    box.innerHTML = '<p class="muted small" style="margin:0">' + (action === 'syncAll' ? 'جارٍ إنشاء المهام…' : 'جارٍ الاتصال بـ Asana…') + '</p>';
+    api('asana', Object.assign({ action: action }, extra || {})).then(function (st) {
+      S.data.asanaConnected = !!st.connected;
+      if (st.project !== undefined) S.data.settings.asana_project_id = st.project;
+      if (!st.connected) { asanaForm(action === 'disconnect' ? '<div class="msg">تم فصل Asana.</div>' : ''); return; }
+      $('asanaBox').innerHTML =
+        '<div class="switch"><span><b>متصل ✓</b><br><span class="small muted">الحساب: ' + esc(st.user || '') + ' · المشروع: ' + esc(st.projectName || st.project) + '</span></span><span class="chip s-confirmed">مفعّل</span></div>' +
+        (st.sync ? '<div class="msg ok">مهام جديدة: ' + st.sync.created + ' · مهام محدّثة: ' + st.sync.updated + (st.sync.failed ? ' · تعذّر: ' + st.sync.failed : '') + '</div>' : '') +
+        '<p class="small">كل حجز يتأكد من الآن تُنشأ له مهمة تلقائيًا.</p>' +
+        '<div class="quick"><button class="btn" data-act="asanaSync">إنشاء مهام للحجوزات المؤكدة القادمة</button></div>' +
+        '<div class="quick" style="margin-top:8px"><button class="btn btn-sm" data-act="asanaEdit">تغيير الرمز أو المشروع</button><button class="btn btn-sm btn-danger" data-act="asanaOff">فصل Asana</button></div>';
+    }).catch(function (e) { asanaForm('<div class="msg err">' + esc(errText(e)) + '</div>'); });
   }
   function loadAutomation(action) {
     var box = $('autoBox'); if (!box) return;
@@ -598,6 +622,10 @@
       case 'pay': sheetPayment(id); break;
       case 'invoice': makeInvoice(id, el); break;
       case 'autoInstall': loadAutomation('install'); break;
+      case 'asanaSave': var tok = $('asTok').value.trim(), pr = $('asProj').value.trim(); if (!pr || (!tok && !S.data.asanaConnected)) { asanaForm('<div class="msg err">أدخل الرمز ورقم المشروع</div>'); break; } loadAsana('save', { token: tok, project: pr }); break;
+      case 'asanaSync': loadAsana('syncAll'); break;
+      case 'asanaEdit': asanaForm(); break;
+      case 'asanaOff': if (confirm('فصل Asana؟ لن تُنشأ مهام جديدة حتى تعيد الربط.')) loadAsana('disconnect'); break;
       case 'autoTest': loadAutomation('test'); break;
       case 'close': closeSheet(); break;
       case 'refresh': load(true); break;
