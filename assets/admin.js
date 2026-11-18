@@ -285,7 +285,8 @@
       if (!booked) { wa('quote', 'إرسال عرض السعر', 'btn-wa wide'); wa('followup', 'متابعة'); }
       if (admin && !booked) A.push('<button class="btn btn-dark" data-act="confirm" data-id="' + esc(b.id) + '">تأكيد واستلام العربون</button>');
       if (admin && booked && Number(b.balance) > 0) A.push('<button class="btn btn-dark" data-act="pay" data-id="' + esc(b.id) + '">تسجيل دفعة</button>');
-      if (admin && b.invoiceNo) wa('send_invoice', 'إرسال الفاتورة');
+      if (admin && b.invoiceUrl) wa('send_invoice', 'إرسال الفاتورة');
+      if (admin && (booked || Number(b.paid) > 0)) A.push('<button class="btn" data-act="invoice" data-id="' + esc(b.id) + '">' + (b.invoiceUrl ? 'تحديث الفاتورة' : 'إصدار الفاتورة') + '</button>');
       if (admin && booked) wa('booking_confirmed', 'رسالة التأكيد');
       if (admin && booked && Number(b.balance) > 0) wa('balance_reminder', 'تذكير بالمتبقي');
       if (b.package === 'comprehensive') wa('groom_shop_visit', 'دعوة لمحل التجهيز');
@@ -332,7 +333,7 @@
     openSheet('<h3>تأكيد الحجز واستلام العربون</h3><p class="muted small" style="margin-top:-6px">' + esc(b.name) + ' · ' + esc(shortDate(b.date)) + ' · الإجمالي ' + money(b.total) + '</p>' +
       payFields(amount || b.deposit) + '<div id="sheetMsg"></div><button class="btn btn-dark btn-block" id="go">تأكيد الحجز</button>', function () {
       $('go').onclick = function () {
-        var btn = this; btn.disabled = true; btn.textContent = 'جارٍ التأكيد…';
+        var btn = this; btn.disabled = true; btn.textContent = 'جارٍ التأكيد وإنشاء الفاتورة…';
         var amt = Number(digits($('amt').value).replace(/[^\d.]/g, ''));
         api('confirm', { id: id, amount: amt, date: $('pdate').value, method: $('method').value, force: !!force }).then(function (r) {
           if (r.warning) {
@@ -567,6 +568,7 @@
       case 'wa': e.preventDefault(); sendMsg(id, el.getAttribute('data-key')); break;
       case 'confirm': sheetConfirm(id); break;
       case 'pay': sheetPayment(id); break;
+      case 'invoice': makeInvoice(id, el); break;
       case 'close': closeSheet(); break;
       case 'refresh': load(true); break;
       case 'logout': logout(); break;
@@ -581,6 +583,18 @@
       case 'reopen': setStatus(id, ST.NEW); break;
     }
   });
+  function makeInvoice(id, btn) {
+    btn.disabled = true; btn.textContent = 'جارٍ إنشاء الفاتورة…';
+    api('invoice', { id: id }).then(function (r) {
+      putBooking(r.booking);
+      var b = r.booking;
+      openSheet('<h3>الفاتورة جاهزة ✓</h3><div class="msg ok">' + esc(b.invoiceNo) + ' · المدفوع ' + money(b.paid) + ' · المتبقي ' + money(b.balance) + '</div>' +
+        '<a class="btn btn-block" href="' + esc(b.invoiceUrl) + '" target="_blank" rel="noopener">فتح الفاتورة (PDF)</a>' +
+        '<button class="btn btn-wa btn-block" style="margin-top:8px" data-act="wa" data-id="' + esc(id) + '" data-key="send_invoice">' + IC.wa + 'إرسال الفاتورة للعميل</button>' +
+        '<button class="btn btn-block" style="margin-top:8px" data-act="close">إغلاق</button>');
+      render();
+    }).catch(function (e) { btn.disabled = false; btn.textContent = 'إصدار الفاتورة'; toast(errText(e)); });
+  }
   function setStatus(id, status) {
     api('status', { id: id, status: status }).then(function (b) { putBooking(b); render(); toast('تم تحديث الحالة: ' + status); }).catch(function (e) { toast(errText(e)); });
   }
