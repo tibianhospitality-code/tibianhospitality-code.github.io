@@ -118,7 +118,7 @@
       ['home', 'الرئيسية', IC.home], ['bookings', 'الحجوزات', IC.list], ['new', 'طلب جديد', IC.plus, 'plus'],
       ['greetings', 'التهاني', IC.gift], ['settings', isAdmin() ? 'الإعدادات' : 'حسابي', IC.gear]
     ].map(function (n) {
-      var on = r === n[0] || (n[0] === 'bookings' && (r === 'booking' || r === 'edit'));
+      var on = r === n[0] || (n[0] === 'bookings' && (r === 'booking' || r === 'edit' || r === 'send'));
       return '<a href="#' + n[0] + '" class="' + (on ? 'on ' : '') + (n[3] || '') + '">' + (n[3] ? '<span class="p">' + n[2] + '</span>' : n[2]) + '<span>' + n[1] + '</span></a>';
     }).join('');
     $('app').innerHTML =
@@ -137,6 +137,7 @@
     switch (r[0]) {
       case 'bookings': return viewBookings();
       case 'booking': return viewBooking(r[1]);
+      case 'send': return viewBooking(r[1], r[2]);
       case 'new': return viewForm(null);
       case 'edit': return viewForm(r[1]);
       case 'greetings': return viewGreetings(r[1] ? decodeURIComponent(r[1]) : '');
@@ -250,7 +251,8 @@
   }
 
   /* ================= صفحة الحجز ================= */
-  function viewBooking(id) {
+  var MSG_LABELS = { quote: 'إرسال عرض السعر', followup: 'متابعة العرض', balance_reminder: 'تذكير بالمتبقي', event_reminder: 'تذكير قبل المناسبة', thank_you: 'شكر وطلب تقييم', booking_confirmed: 'رسالة التأكيد', send_invoice: 'إرسال الفاتورة', groom_shop_visit: 'دعوة لمحل التجهيز' };
+  function viewBooking(id, sendKey) {
     var b = S.byId[id];
     if (!b) { shell('الحجز', '<div class="card empty">الحجز غير موجود. اضغط تحديث.</div>', { back: '#bookings' }); return; }
     var admin = isAdmin(), booked = L.BOOKED.indexOf(b.status) >= 0, cancelled = b.status === ST.CANCELLED;
@@ -302,6 +304,14 @@
       '<a class="btn btn-sm btn-wa" href="' + esc(mobile ? 'whatsapp://send?phone=' + b.phone : 'https://api.whatsapp.com/send?phone=' + b.phone) + '"' + (mobile ? '' : ' target="_blank" rel="noopener"') + '>' + IC.wa + 'محادثة</a></div>' +
       '<dl class="kv">' + kv + '</dl></div>' + moneyHtml +
       '<div class="h2">الإجراءات</div><div class="actions">' + A.join('') + '</div>', { back: '#bookings' });
+    if (sendKey && MSG_LABELS[sendKey] && !(L.MONEY_MESSAGES.indexOf(sendKey) >= 0 && !admin)) {
+      var done = L.sentToday(b, L.templateKey(sendKey, b), today());
+      var card = document.createElement('div');
+      card.className = 'card pad'; card.style.cssText = 'margin-bottom:12px;border:2px solid var(--wa);text-align:center';
+      card.innerHTML = done ? '<div class="msg ok" style="margin:0">✓ أُرسلت «' + esc(MSG_LABELS[sendKey]) + '» اليوم</div>'
+        : '<p class="small muted" style="margin:0 0 8px">من ملخص اليوم</p><button class="btn btn-wa btn-block" style="min-height:54px;font-size:17px" data-act="wa" data-id="' + esc(b.id) + '" data-key="' + esc(sendKey) + '">' + IC.wa + esc(MSG_LABELS[sendKey]) + '</button>';
+      document.querySelector('main').prepend(card);
+    }
   }
 
   /* ================= النماذج المنبثقة ================= */
@@ -523,10 +533,28 @@
       '<div class="h2">التواصل</div><div class="card pad">' + f('whatsapp', 'رقم واتساب العمل', 'ltr') + f('instagram', 'رابط إنستغرام', 'ltr') + f('summary_emails', 'إيميلات الملخص اليومي (افصل بفاصلة)', 'ltr') + '</div>' +
       '<div class="h2">شروط الحجز</div><div class="card pad">' + f('terms_ar', 'بالعربية (كل سطر شرط)', 'area') + f('terms_en', 'بالإنجليزية', 'area') + '</div>' +
       '<div id="setMsg"></div><button class="btn btn-dark btn-block" style="margin-top:12px" data-act="saveSettings">حفظ الإعدادات</button>' +
+      '<div class="h2">الأتمتة</div><div class="card pad" id="autoBox"><p class="muted small" style="margin:0">جارٍ التحقق…</p></div>' +
       '<div class="h2">روابط</div><div class="card pad actions"><a class="btn" href="' + SHEET_URL + '" target="_blank" rel="noopener">فتح جدول البيانات</a><a class="btn" href="' + SITE_URL + '" target="_blank" rel="noopener">صفحة العميل</a></div>' +
       '<p class="hint" style="margin-top:10px">الأسعار والمواصلات وأنواع المناسبات ونصوص الرسائل تُعدّل من جدول البيانات مباشرة، وتظهر فورًا.</p>' +
       '</div><button class="btn btn-block" style="margin-top:16px" data-act="logout">تسجيل الخروج</button>';
     shell('الإعدادات', body);
+    if (!S.data.mustChangePin) loadAutomation('status');
+  }
+  function loadAutomation(action) {
+    var box = $('autoBox'); if (!box) return;
+    if (action !== 'status') box.innerHTML = '<p class="muted small" style="margin:0">' + (action === 'test' ? 'جارٍ إرسال الملخص…' : 'جارٍ التفعيل…') + '</p>';
+    api('automation', { action: action }).then(function (st) {
+      if (!$('autoBox')) return;
+      $('autoBox').innerHTML =
+        '<div class="switch" style="margin-bottom:6px"><span><b>الملخص اليومي الساعة 7 صباحًا</b><br><span class="small muted">إلى: ' + esc(st.emails || 'لا يوجد إيميل — أضفه في «التواصل»') + '</span></span>' +
+        '<span class="chip ' + (st.installed ? 's-confirmed' : 's-cancelled') + '">' + (st.installed ? 'مفعّل' : 'غير مفعّل') + '</span></div>' +
+        (st.lastRun ? '<p class="small muted" style="margin:0 0 8px">آخر تشغيل: ' + esc(stamp(st.lastRun)) + '</p>' : '') +
+        '<p class="small" style="margin:0 0 10px">يشمل: الطلبات الجديدة، المتابعة بعد يومين من العرض، تذكير المتبقي قبل المناسبة بأسبوع، تذكير المناسبة قبلها بيوم، الشكر بعدها بيوم، والتهاني القادمة — وتحت كل مهمة زر واتساب جاهز.</p>' +
+        '<p class="small muted" style="margin:0 0 10px">الإرسال: ' + (st.mode === 'cloud_api' ? 'تلقائي عبر WhatsApp Cloud API' : 'بضغطة منك (مجاني)') + '</p>' +
+        (st.test ? '<div class="msg ok">' + (st.test.to ? 'أُرسل ملخص اليوم إلى ' + esc(st.test.to) + ' — عدد المهام: ' + st.test.count : 'لم يُرسل: لا يوجد إيميل') + '</div>' : '') +
+        '<div class="quick">' + (st.installed ? '' : '<button class="btn btn-dark" data-act="autoInstall">تفعيل الملخص اليومي</button>') +
+        '<button class="btn" data-act="autoTest">إرسال ملخص اليوم الآن</button></div>';
+    }).catch(function (e) { if ($('autoBox')) $('autoBox').innerHTML = '<div class="msg err">' + esc(errText(e)) + '</div>'; });
   }
   function changePin(role, pin, pin2) {
     var m = $('pinMsg');
@@ -569,6 +597,8 @@
       case 'confirm': sheetConfirm(id); break;
       case 'pay': sheetPayment(id); break;
       case 'invoice': makeInvoice(id, el); break;
+      case 'autoInstall': loadAutomation('install'); break;
+      case 'autoTest': loadAutomation('test'); break;
       case 'close': closeSheet(); break;
       case 'refresh': load(true); break;
       case 'logout': logout(); break;
