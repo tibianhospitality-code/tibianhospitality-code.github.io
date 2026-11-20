@@ -10,7 +10,10 @@ window.TIBIAN = {
     business_ar: 'تبيان للضيافة', business_en: 'Tibian Hospitality', tagline_ar: 'لتنظيم المناسبات',
     whatsapp: '96874190947', email: 'Tibianhospitality@gmail.com', cr: '1637247', address: 'السيب - مسقط',
     instagram: 'https://www.instagram.com/tibianhospitality.om',
-    offerActive: true, offer_ar: 'تلبيس المعرس مجانًا مع الباقة الشاملة', offer_en: 'Free groom dressing with the Comprehensive Package',
+    offers: [{ ar: 'تلبيس المعرس مجانًا مع الباقة الشاملة', en: 'Free groom dressing with the Comprehensive Package', package: 'الشاملة' }],
+    comprehensiveAreas: ['مسقط'], gallery: [],
+    consent_ar: 'أوافق على أن تستخدم تبيان للضيافة اسمي ورقم هاتفي وبيانات مناسبتي للتواصل معي بخصوص طلبي، ولإرسال عروض وتسويق من تبيان والجهات التابعة لتبيان للأعمال. ويمكنني طلب إيقاف الرسائل التسويقية في أي وقت.',
+    consent_en: 'I agree that Tibian Hospitality may use my name, phone number and event details to contact me about my request, and to send me offers and marketing from Tibian and the companies under Tibian Business. I can ask to stop marketing messages at any time.',
     terms_ar: 'عربون 50% من قيمة الباقة لتأكيد الحجز.\nيُدفع المبلغ المتبقي قبل موعد المناسبة بأسبوع.\nيُسترد العربون عند الإلغاء خلال أسبوع من تأكيد الحجز فقط، وبعد ذلك لا يُسترد، ويمكن تغيير تاريخ المناسبة فقط.\nالدفع عن طريق التحويل البنكي.\nالأسعار نهائية دون ضريبة قيمة مضافة.\nخدمات الباقات ثابتة، ويتم أي تعديل عليها بالتواصل معنا.\nتُضاف رسوم مواصلات على باقة الضيافة للمناسبات خارج محافظة مسقط.',
     terms_en: 'A 50% deposit confirms the booking.\nThe remaining balance is due one week before the event.\nThe deposit is refundable only if cancelled within one week of confirmation; after that it is non-refundable, but the event date can be changed.\nPayment by bank transfer.\nFinal prices, no VAT.\nPackage services are fixed; any changes are arranged by contacting us.\nTravel fees apply to the Hospitality Package for events outside Muscat Governorate.',
     deposit: 50, balanceDays: 7, minGuests: 100, maxGuests: 1000, maxEvents: 4,
@@ -26,13 +29,16 @@ window.TIBIAN = {
       { from: 901, to: 1000, hosts: 30, supervisors: 3, jars: 18, hospitality: 370, comprehensive: 2240 }
     ],
     occasions: [
-      { ar: 'عقد قران / ملكة', en: 'Wedding contract (Milka)' }, { ar: 'حفل زفاف', en: 'Wedding' },
-      { ar: 'مناسبة خاصة في المنزل', en: 'Private home event' }, { ar: 'حفل شركة / مؤسسة', en: 'Company / corporate event' },
-      { ar: 'افتتاح مشروع / بزنس', en: 'Business opening' }, { ar: 'عزاء', en: 'Condolence' }, { ar: 'أخرى', en: 'Other' }
+      { ar: 'عقد قران / ملكة', en: 'Wedding contract (Milka)', packages: 'الكل' },
+      { ar: 'مناسبة خاصة في منزل أو مزرعة', en: 'Private event at a home or farm', packages: 'الضيافة' },
+      { ar: 'حفل لمؤسسة أو شركة', en: 'Company or organization event', packages: 'الضيافة' },
+      { ar: 'افتتاح مشروع', en: 'Business opening', packages: 'الضيافة' },
+      { ar: 'عزاء', en: 'Condolence', packages: 'الضيافة' },
+      { ar: 'أخرى', en: 'Other', packages: 'الضيافة' }
     ],
     times: [
-      { ar: 'الظهر', en: 'Noon' }, { ar: 'العصر', en: 'Afternoon (Asr)' },
-      { ar: 'المغرب', en: 'Sunset (Maghrib)' }, { ar: 'بعد صلاة العشاء', en: 'After Isha' }
+      { ar: 'صلاة الظهر', en: 'Dhuhr prayer' }, { ar: 'صلاة العصر', en: 'Asr prayer' },
+      { ar: 'صلاة المغرب', en: 'Maghrib prayer' }, { ar: 'صلاة العشاء', en: 'Isha prayer' }
     ],
     travel: [{ name: 'مسقط', fee: 0, appliesTo: 'الكل' }],
     fullDates: [],

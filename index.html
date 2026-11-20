@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css?v=202611181204">
+<link rel="stylesheet" href="assets/site.css?v=202611201209">
 
 <script type="application/ld+json">
 {
@@ -65,7 +65,7 @@
     <h1 class="hero__title" data-t="brand">تبيان للضيافة</h1>
     <p class="hero__tag" data-t="tagline">لتنظيم المناسبات</p>
     <p class="hero__lead" data-t="lead">نستقبل ضيوفكم ونخدمهم كما تحبون: تطييب وقهوة وحلوى وعشاء، بتنظيم يليق بمناسبتكم.</p>
-    <p class="offer hidden" id="offer" role="note"></p>
+    <div class="offers hidden" id="offers" role="note"></div>
     <a href="#calc" class="btn btn--gold hero__cta" data-t="cta">احسب سعر مناسبتك</a>
     <p class="hero__note" data-t="ctaNote">السعر يظهر فورًا · الحجز عبر واتساب</p>
   </div>
@@ -80,6 +80,7 @@
         <article class="pkg">
           <h3 data-t="pkH">باقة الضيافة</h3>
           <p class="pkg__sub" data-t="pkHsub">فريق ضيافة متكامل لاستقبال ضيوفكم وخدمتهم.</p>
+          <div class="pkg__offers hidden" id="pkgOffersH"></div>
           <ul class="ticks">
             <li data-t="pkH1">مضيفون ومشرفون حسب عدد الضيوف</li>
             <li data-t="pkH2">تجهيز المجلس وتبخيره وتنظيم الممر الرئيسي</li>
@@ -92,8 +93,9 @@
         <article class="pkg pkg--featured">
           <span class="pkg__badge hidden" id="pkgBadge" data-t="offerBadge">عرض خاص</span>
           <h3 data-t="pkC">الباقة الشاملة</h3>
-          <p class="pkg__sub" data-t="pkCsub">كل ما تحتاجه مناسبتك في باقة واحدة.</p>
-          <p class="pkg__offer hidden" id="pkgOffer"></p>
+          <p class="pkg__sub" data-t="pkCsub">كل ما يحتاجه عقد القران في باقة واحدة.</p>
+          <p class="pkg__scope" data-t="pkCscope">لعقود القران (الملكة) داخل محافظة مسقط</p>
+          <div class="pkg__offers hidden" id="pkgOffersC"></div>
           <ul class="ticks">
             <li data-t="pkC1">جميع خدمات باقة الضيافة</li>
             <li data-t="pkC2">عشاء من لحم البقر الطازج بخيارين</li>
@@ -114,7 +116,19 @@
       <h2 class="section__title" id="calcTitle" data-t="calcTitle">احسب سعر مناسبتك</h2>
       <p class="section__sub" data-t="calcSub">اختر التفاصيل، ويظهر لك السعر الإجمالي فورًا.</p>
 
-      <form id="form" class="form" novalidate autocomplete="on">
+      <!-- الموافقة قبل البدء -->
+      <div class="card consent" id="consentCard">
+        <h3 class="consent__h" data-t="consentH">قبل أن تبدأ</h3>
+        <label class="consent__row" for="consent">
+          <input type="checkbox" id="consent">
+          <span id="consentText">أوافق على أن تستخدم تبيان للضيافة اسمي ورقم هاتفي وبيانات مناسبتي للتواصل معي بخصوص طلبي، ولإرسال عروض وتسويق من تبيان والجهات التابعة لتبيان للأعمال. ويمكنني طلب إيقاف الرسائل التسويقية في أي وقت.</span>
+        </label>
+        <button type="button" class="btn btn--gold btn--block" id="consentBtn" data-t="consentBtn">أوافق، لنبدأ</button>
+        <p class="consent__err hidden" id="consentErr" role="alert" data-t="consentErr">ضع علامة على الموافقة أولًا لتبدأ.</p>
+      </div>
+      <p class="consent__done hidden" id="consentDone"><span data-t="consentDone">✓ وافقت على شروط التواصل</span> · <button type="button" class="link" id="consentShow" data-t="consentShow">عرض النص</button></p>
+
+      <form id="form" class="form locked" novalidate autocomplete="on">
         <fieldset class="card">
           <legend class="card__h"><span class="num">1</span><span data-t="s1">الباقة</span></legend>
           <div class="seg" role="radiogroup">
@@ -146,6 +160,7 @@
             <div class="field">
               <label class="field__label" for="area" data-t="area">المنطقة</label>
               <select id="area" name="area" class="input"></select>
+              <p class="field__hint hidden" id="areaNote" data-t="areaNote">الباقة الشاملة متاحة داخل محافظة مسقط فقط. للمناسبات خارج مسقط اختر باقة الضيافة.</p>
             </div>
           </div>
 
@@ -179,6 +194,11 @@
                 <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" class="input" dir="ltr" placeholder="9XXXXXXX" maxlength="20">
               </div>
             </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="extras" data-t="extras">خدمات إضافية تريدها (اختياري)</label>
+            <textarea id="extras" name="extras" class="input" rows="3" maxlength="600" placeholder="اكتبها بالتفصيل، مثل: حلوى إضافية، تصوير المعرس، ضيافة للنساء…" data-tp="extrasPh"></textarea>
+            <p class="field__hint" data-t="extrasHint">لا تُضاف إلى السعر تلقائيًا؛ نراجعها ونتواصل معك بشأنها.</p>
           </div>
           <div class="field">
             <label class="field__label" for="notes" data-t="notes">ملاحظات (اختياري)</label>
@@ -245,6 +265,7 @@
         <details><summary data-t="q4">هل تقدمون خدماتكم خارج مسقط؟</summary><p data-t="a4">نعم، نخدم مختلف ولايات السلطنة، وتُضاف رسوم مواصلات على باقة الضيافة للمناسبات خارج محافظة مسقط.</p></details>
         <details><summary data-t="q5">هل يمكنني إضافة خدمة أو حذفها من الباقة؟</summary><p data-t="a5">خدمات الباقات ثابتة. لأي طلب خاص تواصل معنا، ونرتّب لك ما يناسب مناسبتك.</p></details>
         <details><summary data-t="q6">عدد ضيوفي أقل من 100 أو أكثر من 1000، فما الحل؟</summary><p data-t="a6">نجهّز لك باقة خاصة. أرسل طلبك من الحاسبة، وسنتواصل معك بالسعر.</p></details>
+        <details><summary data-t="q9">لمن الباقة الشاملة؟</summary><p data-t="a9">الباقة الشاملة مخصصة لعقود القران (الملكة) داخل محافظة مسقط. لبقية المناسبات أو خارج مسقط اختر باقة الضيافة.</p></details>
         <details><summary data-t="q7">ما خيارات العشاء في الباقة الشاملة؟</summary><p data-t="a7">عشاء من لحم البقر الطازج بخيارين: القبولي واللحم المحمّر، أو البخاري والشواء.</p></details>
         <details><summary data-t="q8">هل تُضاف ضريبة على السعر؟</summary><p data-t="a8">لا، السعر المعروض هو السعر الإجمالي دون ضريبة قيمة مضافة.</p></details>
       </div>
@@ -277,9 +298,9 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="assets/config.js?v=202611181204"></script>
-<script src="assets/logic.js?v=202611181204"></script>
-<script src="assets/api.js?v=202611181204"></script>
-<script src="assets/customer.js?v=202611181204"></script>
+<script src="assets/config.js?v=202611201209"></script>
+<script src="assets/logic.js?v=202611201209"></script>
+<script src="assets/api.js?v=202611201209"></script>
+<script src="assets/customer.js?v=202611201209"></script>
 </body>
 </html>

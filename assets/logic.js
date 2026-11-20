@@ -229,8 +229,66 @@ var TibianLogic = (function () {
       'العشاء': dinner || 'يُحدد لاحقًا',
       'سطر_العشاء': dinner ? 'خيار العشاء: ' + dinner + '\n' : '',
       'الإجمالي': q && !q.special ? fmtMoney(q.total) : '',
-      'العربون': q && !q.special ? fmtMoney(q.deposit) : ''
+      'العربون': q && !q.special ? fmtMoney(q.deposit) : '',
+      'الخدمات_الإضافية': f.extras || '',
+      'سطر_الخدمات': f.extras ? '\nخدمات إضافية مطلوبة: ' + f.extras : ''
     };
+  }
+
+  /** رسالة طلب العميل: القالب الأصلي + سطر الخدمات الإضافية (إن لم يكن القالب يحتويه) */
+  function requestMessage(template, f, q, id) {
+    var v = requestVars(f, q, id);
+    var text = fill(template, v);
+    if (f.extras && String(template).indexOf('{سطر_الخدمات}') < 0 && String(template).indexOf('{الخدمات_الإضافية}') < 0) text += v['سطر_الخدمات'];
+    return text;
+  }
+
+  /* ---------------- قيود الباقات ---------------- */
+
+  /** هل نوع المناسبة متاح لهذه الباقة؟ (العمود «الباقات»: الكل / الضيافة / الشاملة) */
+  function occasionAllowed(o, pkg) {
+    var p = String((o && o.packages) || 'الكل').trim();
+    if (!p || p === 'الكل') return true;
+    return p === (pkg === 'comprehensive' ? 'الشاملة' : 'الضيافة');
+  }
+  function occasionsFor(occasions, pkg) {
+    return (occasions || []).filter(function (o) { return occasionAllowed(o, pkg); });
+  }
+  /** المناطق المتاحة للباقة: الشاملة داخل المناطق المحددة فقط (افتراضيًا مسقط) */
+  function areaAllowed(area, pkg, comprehensiveAreas) {
+    if (pkg !== 'comprehensive') return true;
+    var list = (comprehensiveAreas && comprehensiveAreas.length ? comprehensiveAreas : ['مسقط']);
+    return list.indexOf(String(area || 'مسقط')) >= 0;
+  }
+
+  /* ---------------- رقم الفاتورة ---------------- */
+
+  var MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  /**
+   * يبني رقم الفاتورة من نمط مثل «TBH/{MON}/{NNN}/{YY}».
+   * {YYYY} {YY} {MM} {MON} = سنة/شهر المناسبة · {N} {NN} {NNN} {NNNN} = الرقم التسلسلي
+   */
+  function formatInvoiceNo(fmt, n, ymd) {
+    var d = parseYmd(ymd) || new Date();
+    var y = String(d.getUTCFullYear()), m = d.getUTCMonth();
+    var pad = function (k) { return (new Array(k + 1).join('0') + n).slice(-Math.max(k, String(n).length)); };
+    return String(fmt || 'TBH/{MON}/{NNN}/{YY}')
+      .replace(/\{YYYY\}/g, y).replace(/\{YY\}/g, y.slice(2)).replace(/\{MON\}/g, MONTHS[m]).replace(/\{MM\}/g, ('0' + (m + 1)).slice(-2))
+      .replace(/\{NNNN\}/g, pad(4)).replace(/\{NNN\}/g, pad(3)).replace(/\{NN\}/g, pad(2)).replace(/\{N\}/g, String(n));
+  }
+  /** مفتاح العدّاد: شهري (يبدأ من 1 كل شهر) أو سنوي — حسب وجود {MON}/{MM} في النمط */
+  function invoiceCounterKey(fmt, ymd) {
+    var d = parseYmd(ymd) || new Date();
+    var y = String(d.getUTCFullYear());
+    return /\{MON\}|\{MM\}/.test(String(fmt || '')) ? y + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2) : y;
+  }
+  /** يستخرج الرقم التسلسلي من رقم فاتورة موجود بنفس النمط (أو -1) */
+  function parseInvoiceSeq(fmt, invoiceNo) {
+    var re = String(fmt || '').replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+      .replace(/\{YYYY\}/g, '\\d{4}').replace(/\{YY\}/g, '\\d{2}').replace(/\{MM\}/g, '\\d{2}').replace(/\{MON\}/g, '[A-Z]{3}')
+      .replace(/\{N{1,4}\}/g, '(\\d+)');
+    var m = new RegExp('^' + re + '$').exec(String(invoiceNo || ''));
+    return m ? Number(m[1]) : -1;
   }
 
   /* ---------------- رسائل الحجوزات (لوحة الإدارة) ---------------- */
@@ -271,6 +329,7 @@ var TibianLogic = (function () {
       'رقم_الفاتورة': b.invoiceNo || '', 'رابط_الفاتورة': b.invoiceUrl || '(نرسلها لكم قريبًا)',
       'بيانات_البنك': bankText(s),
       'محل_التجهيز': s.groom_shop_name || '(اسم المحل)', 'موقع_المحل': s.groom_shop_map || '',
+      'محلات_التجهيز': (ctx && ctx.shops || []).filter(function (x) { return x.active !== false; }).map(function (x) { return '🏪 ' + x.name + (x.map ? '\n📍 ' + x.map : ''); }).join('\n\n'),
       'إنستغرام': s.instagram || ''
     };
     if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) v[k] = extra[k];
@@ -368,7 +427,9 @@ var TibianLogic = (function () {
     tierLabel: tierLabel, findTier: findTier, findArea: findArea, travelApplies: travelApplies, quote: quote,
     countOnDate: countOnDate, fullDates: fullDates,
     applyPayment: applyPayment, isRefundable: isRefundable, balanceDueDate: balanceDueDate,
-    fill: fill, composeLocation: composeLocation, requestVars: requestVars,
+    fill: fill, composeLocation: composeLocation, requestVars: requestVars, requestMessage: requestMessage,
+    occasionAllowed: occasionAllowed, occasionsFor: occasionsFor, areaAllowed: areaAllowed,
+    MONTHS: MONTHS, formatInvoiceNo: formatInvoiceNo, invoiceCounterKey: invoiceCounterKey, parseInvoiceSeq: parseInvoiceSeq,
     bankText: bankText, bookingVars: bookingVars, templateKey: templateKey, MONEY_MESSAGES: MONEY_MESSAGES,
     afterMessage: afterMessage, sentToday: sentToday, dashboard: dashboard, monthStats: monthStats, greetingList: greetingList
   };

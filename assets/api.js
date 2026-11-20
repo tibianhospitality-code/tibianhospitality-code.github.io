@@ -61,7 +61,8 @@
           if (!L.validPhone(f.phone)) { var e2 = new Error('invalid phone'); e2.code = 'phone'; return reject(e2); }
           var qq = L.quote(cfg2, f.package, f.guests, f.area);
           var id = 'T' + (mockSeq++);
-          var text = L.fill(qq.special ? cfg2.templates.special_request : cfg2.templates.customer_request, L.requestVars(f, qq, id));
+          if (f.consent !== true) { var e3 = new Error('consent required'); e3.code = 'consent'; return reject(e3); }
+          var text = L.requestMessage(qq.special ? cfg2.templates.special_request : cfg2.templates.customer_request, f, qq, id);
           return resolve({ id: id, special: qq.special, total: qq.total || 0, deposit: qq.deposit || 0, text: text, whatsapp: cfg2.whatsapp });
         }
         if (action === 'admin' && window.TIBIAN_MOCK_ADMIN) return window.TIBIAN_MOCK_ADMIN(q).then(resolve, reject);

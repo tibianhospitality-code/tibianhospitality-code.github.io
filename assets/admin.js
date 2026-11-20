@@ -24,6 +24,10 @@
   function chip(s) { return '<span class="chip ' + statusClass(s) + '">' + esc(s) + '</span>'; }
   function pkgName(p) { return L.PKG[p] ? L.PKG[p].ar : (p || ''); }
   function shortDate(ymd) { var d = L.arDate(ymd); return d || '—'; }
+  /** عدد حجوزات العميل السابقة بنفس الرقم (غير الملغاة) */
+  function repeatCount(b) {
+    return (S.data.bookings || []).filter(function (x) { return x.id !== b.id && x.phone === b.phone && x.status !== ST.CANCELLED && x.created < b.created; }).length;
+  }
   /** «2026-10-23 11:00» → «الجمعة 23/10/2026 · 11:00» */
   function stamp(s) { s = String(s || ''); var t = s.slice(11, 16); return shortDate(s.slice(0, 10)) + (t ? ' · ' + t : ''); }
 
@@ -99,11 +103,30 @@
     var k = L.templateKey(key, b);
     var tpl = S.data.templates[k];
     if (!tpl) return null;
-    return { key: k, text: L.fill(tpl, L.bookingVars(b, { s: S.data.settings, tiers: S.data.tiers }, extra)) };
+    return { key: k, text: L.fill(tpl, L.bookingVars(b, { s: S.data.settings, tiers: S.data.tiers, shops: S.data.shops }, extra)) };
   }
-  function sendMsg(id, key) {
+  /** متغيرات محل التجهيز المختار (أو كل المحلات) */
+  function shopVars(idx) {
+    var shops = S.data.shops || [];
+    if (idx === 'all' || shops.length > 1 && idx == null) {
+      return { 'محل_التجهيز': shops.map(function (x) { return x.name; }).join('، '),
+        'موقع_المحل': shops.filter(function (x) { return x.map; }).map(function (x) { return x.name + ': ' + x.map; }).join('\n') };
+    }
+    var sh = shops[Number(idx) || 0];
+    return sh ? { 'محل_التجهيز': sh.name, 'موقع_المحل': sh.map || '' } : null;
+  }
+  /** دعوة محل التجهيز: إن وُجد أكثر من محل نسأل أيّها */
+  function chooseShop(id) {
+    var shops = S.data.shops || [];
+    if (shops.length <= 1) { sendMsg(id, 'groom_shop_visit', shopVars(0)); return; }
+    openSheet('<h3>أي محل تجهيز؟</h3><div class="list">' + shops.map(function (x, i) {
+      return '<button class="btn btn-block" data-act="shopPick" data-id="' + esc(id) + '" data-shop="' + i + '">' + esc(x.name) + '</button>';
+    }).join('') + '<button class="btn btn-gold btn-block" data-act="shopPick" data-id="' + esc(id) + '" data-shop="all">كل المحلات</button></div>');
+  }
+  function sendMsg(id, key, extra) {
     var b = S.byId[id]; if (!b) return;
-    var m = messageFor(b, key);
+    if (key === 'groom_shop_visit' && !extra) { chooseShop(id); return; }
+    var m = messageFor(b, key, extra);
     if (!m) { toast('لا يوجد قالب لهذه الرسالة في ورقة «الرسائل»'); return; }
     openWa(b.phone, m.text);
     api('contacted', { id: id, key: m.key }).then(function (nb) { putBooking(nb); if (!document.querySelector('.sheet.show')) render(); }).catch(function (e) { toast(errText(e)); });
@@ -133,7 +156,7 @@
     if (!S.session) return viewLogin();
     if (!S.data) return load();
     var r = route();
-    if (S.data.mustChangePin && r[0] !== 'settings') { location.hash = '#settings'; return; }
+    if (S.data.mustChangePin && !(r[0] === 'settings' && r[1] === 'security')) { location.hash = '#settings/security'; return; }
     switch (r[0]) {
       case 'bookings': return viewBookings();
       case 'booking': return viewBooking(r[1]);
@@ -141,7 +164,7 @@
       case 'new': return viewForm(null);
       case 'edit': return viewForm(r[1]);
       case 'greetings': return viewGreetings(r[1] ? decodeURIComponent(r[1]) : '');
-      case 'settings': return viewSettings();
+      case 'settings': return viewSettings(r[1]);
       default: return viewHome();
     }
   }
@@ -264,7 +287,9 @@
       b.package === 'comprehensive' ? ['العشاء', b.dinner || 'لم يُحدد'] : null,
       ['المصدر', b.source], ['أُنشئ', stamp(b.created)], b.bookedOn ? ['تاريخ التأكيد', shortDate(b.bookedOn)] : null,
       b.nextFollowUp && L.OPEN.indexOf(b.status) >= 0 ? ['المتابعة القادمة', shortDate(b.nextFollowUp)] : null,
-      b.lastContact ? ['آخر تواصل', stamp(b.lastContact)] : null, b.notes ? ['ملاحظات', b.notes] : null
+      b.lastContact ? ['آخر تواصل', stamp(b.lastContact)] : null, b.extras ? ['⭐ خدمات إضافية', '<b style="color:var(--gold-ink)">' + esc(b.extras) + '</b>', true] : null, b.notes ? ['ملاحظات', b.notes] : null,
+      b.consent ? ['الموافقة', b.consent] : null,
+      repeatCount(b) ? ['عميل سابق', '<span class="chip s-paid">' + repeatCount(b) + ' حجز سابق</span>', true] : null
     ].filter(Boolean).map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + (r[2] ? r[1] : esc(r[1])) + '</dd>'; }).join('');
 
     var moneyHtml = '';
@@ -388,7 +413,7 @@
     var b = id ? S.byId[id] : null;
     if (id && !b) { shell('تعديل', '<div class="card empty">الحجز غير موجود</div>', { back: '#bookings' }); return; }
     var admin = isAdmin(), d = S.data;
-    var v = b || { package: 'hospitality', occasion: (d.occasions[0] || {}).ar, time: 'المغرب' };
+    var v = b || { package: 'hospitality', occasion: (d.occasions[0] || {}).ar, time: 'صلاة المغرب' };
     function opts(list, sel) { return list.map(function (o) { var x = o.ar || o; return '<option value="' + esc(x) + '"' + (x === sel ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join(''); }
     var areaOpts = (b ? '<option value="__keep">بدون تغيير</option>' : '') + '<option value="مسقط">مسقط</option>' +
       d.travel.filter(function (a) { return a.name !== 'مسقط'; }).map(function (a) { return '<option value="' + esc(a.name) + '">' + esc(a.name) + (admin && a.fee ? ' (+' + a.fee + ')' : '') + '</option>'; }).join('') +
@@ -410,6 +435,7 @@
       (b ? '' : '<div class="field"><label for="f_src">مصدر الطلب</label><select class="input" id="f_src">' + opts(['واتساب', 'اتصال', 'إنستغرام', 'توصية', 'أخرى'], 'واتساب') + '</select></div>') +
       (admin ? '<div class="grid2"><div class="field"><label for="f_custom">سعر خاص (اختياري)</label><input class="input" id="f_custom" inputmode="decimal" placeholder="تلقائي"></div>' +
         '<div class="field"><label for="f_travel">رسوم مواصلات (اختياري)</label><input class="input" id="f_travel" inputmode="decimal" placeholder="تلقائي"></div></div>' : '') +
+      '<div class="field"><label for="f_extras">خدمات إضافية يطلبها العميل</label><textarea class="input" id="f_extras" maxlength="600" placeholder="اكتبها بالتفصيل">' + esc(v.extras || '') + '</textarea></div>' +
       '<div class="field"><label for="f_notes">ملاحظات</label><textarea class="input" id="f_notes" maxlength="500">' + esc(v.notes || '') + '</textarea></div>' +
       (admin ? '<div class="price-live" id="livePrice"></div>' : '') +
       '<div id="formMsg"></div><button class="btn btn-dark btn-block" style="margin-top:12px" id="saveBtn">' + (b ? 'حفظ التعديلات' : 'حفظ الطلب') + '</button></form>';
@@ -445,7 +471,7 @@
       var p = {
         package: c.package, name: $('f_name').value.trim(), phone: digits($('f_phone').value), occasion: $('f_occ').value,
         guests: c.guests, date: $('f_date').value, time: $('f_time').value, location: $('f_loc').value.trim(),
-        dinner: c.package === 'comprehensive' ? $('f_din').value : '', notes: $('f_notes').value
+        dinner: c.package === 'comprehensive' ? $('f_din').value : '', notes: $('f_notes').value, extras: $('f_extras').value
       };
       if (c.area !== '__keep') p.area = c.area;
       if (!b) p.source = $('f_src').value;
@@ -472,7 +498,9 @@
     var done = people.filter(function (p) { return p.sent; }).length;
     var body = '<div class="card pad"><div class="field"><label for="gocc">المناسبة</label><input class="input" id="gocc" list="hol" value="' + esc(occ) + '" placeholder="مثال: العيد الوطني المجيد">' +
       '<datalist id="hol">' + hol.map(function (h) { return '<option value="' + esc(h.name) + '">' + esc(shortDate(h.date)) + '</option>'; }).join('') + '</datalist>' +
-      '<div class="hint">رسالة التهنئة من ورقة «الرسائل» (greeting). كل عميل يظهر مرة واحدة فقط، ومن وصلته التهنئة يُعلَّم ✓ حتى لا تتكرر.</div></div>' +
+      '<div class="hint">كل عميل يظهر مرة واحدة فقط، ومن وصلته التهنئة يُعلَّم ✓ حتى لا تتكرر.</div></div>' +
+      '<div class="field"><label for="gtpl">نموذج الرسالة</label><select class="input" id="gtpl">' + (S.data.greetingTemplates || []).map(function (t, i) { return '<option value="' + i + '"' + (String(i) === String(store('tibian_greet_tpl') || 0) ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('') + '</select>' +
+      '<div class="hint"><a href="#settings/greetings">إضافة نماذج أو تعديلها</a></div><pre id="gprev" class="small" style="white-space:pre-wrap;background:var(--sand);border-radius:10px;padding:8px 10px;margin:8px 0 0;font-family:inherit"></pre></div>' +
       (occ ? '<p class="small" style="margin:0">أُرسلت التهنئة: <b>' + done + '</b> من أصل <b>' + people.length + '</b></p>' : '') + '</div>' +
       (occ ? '<div class="list" style="margin-top:12px">' + (people.length ? people.map(function (p) {
         return '<div class="card row"><div class="main"><div class="name">' + esc(p.name) + '</div><div class="meta" dir="ltr" style="text-align:end">+' + esc(p.phone) + '</div></div>' +
@@ -481,13 +509,16 @@
       }).join('') : '<div class="card empty">لا يوجد عملاء بعد</div>') + '</div>' : '');
     shell('التهاني', body);
     $('gocc').onchange = function () { store('tibian_greet_occ', this.value.trim()); location.hash = '#greetings/' + encodeURIComponent(this.value.trim()); };
+    function gprev() { var t = (S.data.greetingTemplates || [])[Number($('gtpl').value || 0)]; $('gprev').textContent = t ? L.fill(t.text, { 'الاسم': 'سالم', 'المناسبة_العامة': $('gocc').value || '…' }) : ''; }
+    if ($('gtpl')) { $('gtpl').onchange = function () { store('tibian_greet_tpl', this.value); gprev(); }; gprev(); }
   }
   function sendGreeting(phone, id) {
     var occ = $('gocc').value.trim();
     if (!occ) { toast('اكتب اسم المناسبة أولًا'); return; }
     var b = S.byId[id] || { name: '', phone: phone };
-    var tpl = S.data.templates.greeting;
-    if (!tpl) { toast('لا يوجد قالب greeting في ورقة «الرسائل»'); return; }
+    var tpls = S.data.greetingTemplates || [], ti = Number(($('gtpl') || {}).value || 0);
+    var tpl = (tpls[ti] && tpls[ti].text) || S.data.templates.greeting;
+    if (!tpl) { toast('أضف نموذج تهنئة من الإعدادات ← رسائل التهنئة'); return; }
     openWa(phone, L.fill(tpl, L.bookingVars(b, { s: S.data.settings, tiers: S.data.tiers }, { 'المناسبة_العامة': occ })));
     S.data.greetSent = S.data.greetSent || {};
     var list = S.data.greetSent[occ] = S.data.greetSent[occ] || [];
@@ -497,23 +528,268 @@
   }
 
   /* ================= الإعدادات ================= */
-  function viewSettings() {
+  /* ================= الإعدادات: صفحة رئيسية وصفحات فرعية ================= */
+  var SETTINGS_PAGES = [
+    ['offers', 'العروض', 'أضف عروضًا متعددة وفعّلها أو أوقفها، وتظهر فورًا في صفحة العميل'],
+    ['prices', 'أسعار الباقات', 'فئات الضيوف وعدد المضيفين وسعر الضيافة والشاملة'],
+    ['lists', 'أنواع المناسبات والأوقات والمناطق', 'ما يظهر للعميل في النموذج ورسوم المواصلات'],
+    ['shops', 'محلات تجهيز المعرس', 'عدة محلات مع روابط مواقعها'],
+    ['greetings', 'رسائل التهنئة', 'عدة نماذج تختار منها عند إرسال التهاني'],
+    ['gallery', 'معرض الصور', 'ارفع صور المناسبات من جوالك وتظهر في صفحة العميل'],
+    ['invoice', 'رقم الفاتورة', 'نمط الترقيم مثل TBH/DEC/005/26 وآخر رقم لكل شهر'],
+    ['general', 'البنك والتواصل والشروط', 'بيانات التحويل، قواعد الحجز، نص الموافقة، الشروط'],
+    ['security', 'رموز الدخول', 'رمز المدير ورمز الموظف'],
+    ['automation', 'الأتمتة وAsana', 'الملخص اليومي الساعة 7 وربط Asana']
+  ];
+  function viewSettings(sub) {
     if (!isAdmin()) {
       shell('حسابي', '<div class="card pad"><p style="margin-top:0">أنت مسجّل كـ <b>موظف</b>. ترى الحجوزات والمهام وترسل الرسائل، أما المبالغ والإعدادات فللمدير فقط.</p>' +
         '<button class="btn btn-block" data-act="logout">تسجيل الخروج</button></div>');
       return;
     }
-    var s = S.data.settings;
-    function f(key, label, type, hint) {
-      var val = s[key] == null ? '' : s[key];
-      var input = type === 'area' ? '<textarea class="input" data-set="' + key + '" rows="5">' + esc(val) + '</textarea>'
-        : '<input class="input" data-set="' + key + '" value="' + esc(val) + '"' + (type === 'num' ? ' inputmode="numeric"' : '') + (type === 'ltr' ? ' dir="ltr"' : '') + '>';
-      return '<div class="field"><label>' + label + '</label>' + input + (hint ? '<div class="hint">' + hint + '</div>' : '') + '</div>';
+    if (S.data.mustChangePin) sub = 'security';
+    switch (sub) {
+      case 'offers': return viewTableEditor('offers');
+      case 'prices': return viewTableEditor('prices');
+      case 'shops': return viewTableEditor('shops');
+      case 'greetings': return viewTableEditor('greetings');
+      case 'lists': return viewLists();
+      case 'gallery': return viewGallery();
+      case 'invoice': return viewInvoiceSettings();
+      case 'general': return viewGeneral();
+      case 'security': return viewSecurity();
+      case 'automation': return viewAutomation();
     }
-    var offerOn = /^(نعم|yes|true|1)$/i.test(String(s.offer_active).trim());
-    var body =
-      (S.data.mustChangePin ? '<div class="msg warn"><b>مهم:</b> رمز الدخول الحالي هو الرمز الافتراضي. غيّره الآن قبل استخدام اللوحة.</div>' : '') +
-      '<div class="h2">رموز الدخول</div><div class="card pad">' +
+    shell('الإعدادات', '<div class="list">' + SETTINGS_PAGES.map(function (p) {
+      return '<a class="card row" href="#settings/' + p[0] + '"><div class="main"><div class="name">' + esc(p[1]) + '</div><div class="meta" style="white-space:normal">' + esc(p[2]) + '</div></div><span class="muted" aria-hidden="true">‹</span></a>';
+    }).join('') + '</div>' +
+      '<div class="h2">روابط</div><div class="card pad actions"><a class="btn" href="' + SHEET_URL + '" target="_blank" rel="noopener">فتح جدول البيانات</a><a class="btn" href="' + SITE_URL + '" target="_blank" rel="noopener">صفحة العميل</a></div>' +
+      '<button class="btn btn-block" style="margin-top:16px" data-act="logout">تسجيل الخروج</button>');
+  }
+  function subShell(title, body) { shell(title, body, { back: '#settings' }); }
+
+  /* ---------- محرر الجداول (العروض، الأسعار، المحلات، التهاني، القوائم) ---------- */
+  var TABLE_UI = {
+    offers: { title: 'العروض', add: 'إضافة عرض', empty: 'لا توجد عروض بعد.',
+      intro: 'العروض المفعّلة تظهر في أعلى صفحة العميل وعلى بطاقة الباقة. حدّد تاريخ البداية والنهاية إن أردت أن يتوقف العرض تلقائيًا.',
+      cols: [{ k: 'active', l: 'العرض مفعّل', t: 'bool' }, { k: 'text_ar', l: 'نص العرض بالعربية', t: 'text', ph: 'مثال: تلبيس المعرس مجانًا مع الباقة الشاملة' },
+        { k: 'text_en', l: 'نص العرض بالإنجليزية (اختياري)', t: 'text', ltr: 1 }, { k: 'package', l: 'يظهر على', t: 'enum', o: [['الكل', 'كل الباقات'], ['الضيافة', 'باقة الضيافة'], ['الشاملة', 'الباقة الشاملة']] },
+        { k: 'from', l: 'يبدأ من (اختياري)', t: 'date', half: 1 }, { k: 'to', l: 'ينتهي في (اختياري)', t: 'date', half: 1 }],
+      blank: { active: true, text_ar: '', text_en: '', package: 'الكل', from: '', to: '' }, label: function (r) { return r.text_ar || 'عرض جديد'; } },
+    prices: { title: 'أسعار الباقات', add: 'إضافة فئة', empty: '',
+      intro: 'كل سطر فئة عدد ضيوف. السعر المعروض للعميل هو السعر الإجمالي. العدد خارج كل الفئات (مثل أقل من 100) يظهر للعميل «باقة خاصة» بدون سعر ويتواصل معك — ويمكنك إضافة فئة له هنا ليظهر له سعر تلقائيًا، ثم عدّل «أقل/أكبر عدد ضيوف» في البنك والتواصل والشروط.',
+      cols: [{ k: 'from', l: 'من (ضيف)', t: 'int', half: 1 }, { k: 'to', l: 'إلى (ضيف)', t: 'int', half: 1 }, { k: 'hosts', l: 'المضيفون', t: 'int', half: 1 }, { k: 'supervisors', l: 'المشرفون', t: 'int', half: 1 },
+        { k: 'hospitality', l: 'سعر الضيافة (ر.ع)', t: 'money', half: 1 }, { k: 'comprehensive', l: 'سعر الشاملة (ر.ع)', t: 'money', half: 1 }, { k: 'jars', l: 'فخارات الحلوى (للشاملة)', t: 'int', half: 1 }],
+      blank: { from: '', to: '', hosts: '', supervisors: '', jars: '', hospitality: '', comprehensive: '' }, label: function (r) { return (r.from || '?') + '–' + (r.to || '?') + ' ضيف'; }, noMove: 1 },
+    shops: { title: 'محلات تجهيز المعرس', add: 'إضافة محل', empty: 'لا توجد محلات بعد.',
+      intro: 'عند إرسال «دعوة لمحل التجهيز» تختار المحل (أو كل المحلات)، ويُرسل اسمه ورابط موقعه للعميل.',
+      cols: [{ k: 'active', l: 'المحل متاح', t: 'bool' }, { k: 'name', l: 'اسم المحل', t: 'text' }, { k: 'map', l: 'رابط الموقع (خرائط Google)', t: 'url', ltr: 1, ph: 'https://maps.app.goo.gl/…' },
+        { k: 'phone', l: 'هاتف المحل (اختياري)', t: 'text', ltr: 1 }, { k: 'notes', l: 'ملاحظات (اختياري)', t: 'text' }],
+      blank: { active: true, name: '', map: '', phone: '', notes: '' }, label: function (r) { return r.name || 'محل جديد'; } },
+    greetings: { title: 'رسائل التهنئة', add: 'إضافة نموذج', empty: 'لا توجد نماذج بعد.',
+      intro: 'تختار النموذج في صفحة «التهاني». المتغيرات: {الاسم} اسم العميل، {المناسبة_العامة} اسم المناسبة.',
+      cols: [{ k: 'name', l: 'اسم النموذج', t: 'text', ph: 'مثال: العيد الوطني' }, { k: 'text', l: 'نص الرسالة', t: 'longtext' }],
+      blank: { name: '', text: 'كل عام وأنتم بخير {الاسم} 🤍\nتتقدم تبيان للضيافة بأطيب التهاني بمناسبة {المناسبة_العامة}.' }, label: function (r) { return r.name || 'نموذج جديد'; } },
+    occasions: { title: 'أنواع المناسبات', add: 'إضافة نوع', empty: '',
+      intro: '«الباقات» تحدد أين يظهر النوع: الكل، أو الضيافة فقط، أو الشاملة فقط.',
+      cols: [{ k: 'ar', l: 'بالعربية', t: 'text' }, { k: 'en', l: 'بالإنجليزية', t: 'text', ltr: 1 }, { k: 'packages', l: 'يظهر في', t: 'enum', o: [['الكل', 'كل الباقات'], ['الضيافة', 'باقة الضيافة فقط'], ['الشاملة', 'الباقة الشاملة فقط']] }],
+      blank: { ar: '', en: '', packages: 'الضيافة' }, label: function (r) { return r.ar || 'نوع جديد'; } },
+    times: { title: 'أوقات المناسبات', add: 'إضافة وقت', empty: '',
+      cols: [{ k: 'ar', l: 'بالعربية', t: 'text', half: 1 }, { k: 'en', l: 'بالإنجليزية', t: 'text', ltr: 1, half: 1 }],
+      blank: { ar: '', en: '' }, label: function (r) { return r.ar || 'وقت جديد'; } },
+    travel: { title: 'المناطق ورسوم المواصلات', add: 'إضافة منطقة', empty: '',
+      intro: 'المناطق خارج مسقط تظهر للعميل في قائمة «المنطقة» لباقة الضيافة، وتُضاف رسومها إلى السعر.',
+      cols: [{ k: 'name', l: 'المنطقة / المجلس', t: 'text', half: 1 }, { k: 'fee', l: 'الرسوم (ر.ع)', t: 'money', half: 1 }, { k: 'appliesTo', l: 'تنطبق على', t: 'enum', o: [['باقة الضيافة', 'باقة الضيافة'], ['الكل', 'كل الباقات']] }, { k: 'notes', l: 'ملاحظات', t: 'text' }],
+      blank: { name: '', fee: '', appliesTo: 'باقة الضيافة', notes: '' }, label: function (r) { return r.name || 'منطقة جديدة'; } }
+  };
+
+  function viewTableEditor(key) {
+    var ui = TABLE_UI[key];
+    subShell(ui.title, '<div id="ed-' + key + '"><div class="loading">جارٍ التحميل…</div></div>');
+    mountTable($('ed-' + key), key);
+  }
+  function viewLists() {
+    subShell('القوائم', ['occasions', 'times', 'travel'].map(function (k) {
+      return '<div class="h2">' + esc(TABLE_UI[k].title) + '</div><div id="ed-' + k + '"><div class="loading">جارٍ التحميل…</div></div>';
+    }).join(''));
+    ['occasions', 'times', 'travel'].forEach(function (k) { mountTable($('ed-' + k), k); });
+  }
+
+  /** يرسم محرر جدول داخل عنصر، ويحفظ الجدول كاملًا عند «حفظ» */
+  function mountTable(box, key) {
+    var ui = TABLE_UI[key], rows = [];
+    function fieldHtml(c, r, i) {
+      var id = 'tb-' + key + '-' + i + '-' + c.k, v = r[c.k] == null ? '' : r[c.k];
+      if (c.t === 'bool') return '<label class="switch" style="grid-column:1/-1"><span>' + esc(c.l) + '</span><input type="checkbox" id="' + id + '" data-i="' + i + '" data-k="' + c.k + '"' + (v ? ' checked' : '') + '></label>';
+      var input;
+      if (c.t === 'longtext') input = '<textarea class="input" id="' + id + '" rows="5" data-i="' + i + '" data-k="' + c.k + '">' + esc(v) + '</textarea>';
+      else if (c.t === 'enum') input = '<select class="input" id="' + id + '" data-i="' + i + '" data-k="' + c.k + '">' + c.o.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === v ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>';
+      else input = '<input class="input" id="' + id + '" data-i="' + i + '" data-k="' + c.k + '" value="' + esc(v) + '"' + (c.t === 'date' ? ' type="date"' : '') +
+        (c.t === 'int' || c.t === 'money' ? ' inputmode="decimal"' : '') + (c.ltr || c.t === 'url' ? ' dir="ltr"' : '') + (c.ph ? ' placeholder="' + esc(c.ph) + '"' : '') + '>';
+      return '<div class="field"' + (c.half ? '' : ' style="grid-column:1/-1"') + '><label for="' + id + '">' + esc(c.l) + '</label>' + input + '</div>';
+    }
+    function draw(msg) {
+      box.innerHTML = (ui.intro ? '<p class="hint" style="margin:0 0 10px">' + esc(ui.intro) + '</p>' : '') +
+        (rows.length ? '<div class="list">' + rows.map(function (r, i) {
+          return '<div class="card pad"><div class="detail-head" style="margin-bottom:6px"><h2 style="font-size:15px">' + esc(ui.label(r)) + '</h2>' +
+            (ui.noMove ? '' : '<button type="button" class="btn btn-sm" data-tb="up" data-i="' + i + '" aria-label="تحريك للأعلى"' + (i ? '' : ' disabled') + '>↑</button>') +
+            '<button type="button" class="btn btn-sm btn-danger" data-tb="del" data-i="' + i + '">حذف</button></div>' +
+            '<div class="grid2">' + ui.cols.map(function (c) { return fieldHtml(c, r, i); }).join('') + '</div></div>';
+        }).join('') + '</div>' : '<div class="card empty">' + esc(ui.empty || 'لا توجد بيانات') + '</div>') +
+        '<button type="button" class="btn btn-block" style="margin-top:10px" data-tb="add">+ ' + esc(ui.add) + '</button>' +
+        (msg || '') + '<button type="button" class="btn btn-dark btn-block" style="margin-top:10px" data-tb="save">حفظ ' + esc(ui.title) + '</button>';
+    }
+    function read() {
+      box.querySelectorAll('[data-k]').forEach(function (el) {
+        var r = rows[Number(el.getAttribute('data-i'))]; if (!r) return;
+        r[el.getAttribute('data-k')] = el.type === 'checkbox' ? el.checked : digits(el.value);
+      });
+    }
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-tb]'); if (!b) return;
+      var act = b.getAttribute('data-tb'), i = Number(b.getAttribute('data-i'));
+      read();
+      if (act === 'add') { rows.push(JSON.parse(JSON.stringify(ui.blank))); draw(); var last = box.querySelectorAll('.card.pad'); if (last.length) last[last.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      if (act === 'del') { if (confirm('حذف «' + ui.label(rows[i]) + '»؟')) { rows.splice(i, 1); draw(); } }
+      if (act === 'up' && i > 0) { var t = rows[i - 1]; rows[i - 1] = rows[i]; rows[i] = t; draw(); }
+      if (act === 'save') {
+        b.disabled = true; b.textContent = 'جارٍ الحفظ…';
+        api('tables', { action: 'save', table: key, rows: rows }).then(function (r) {
+          rows = r.rows; afterTableSave(key, rows);
+          draw('<div class="msg ok" style="margin-top:10px">تم الحفظ ✓ ويظهر في صفحة العميل خلال دقيقة.</div>');
+        }).catch(function (er) { draw('<div class="msg err" style="margin-top:10px">' + esc(errText(er)) + '</div>'); });
+      }
+    });
+    api('tables', { action: 'get', table: key }).then(function (r) { rows = r.rows; draw(); })
+      .catch(function (er) { box.innerHTML = '<div class="msg err">' + esc(errText(er)) + '</div>'; });
+  }
+  /** بعد الحفظ نحدّث البيانات المحلية التي تعتمد على الجدول */
+  function afterTableSave(key, rows) {
+    if (key === 'shops') S.data.shops = rows.filter(function (x) { return x.active; });
+    if (key === 'greetings') S.data.greetingTemplates = rows;
+    if (key === 'occasions') S.data.occasions = rows;
+    if (key === 'times') S.data.times = rows;
+    if (key === 'travel') S.data.travel = rows.map(function (x) { return { name: x.name, fee: Number(x.fee) || 0, appliesTo: x.appliesTo }; });
+    if (key === 'prices') S.data.tiers = rows;
+  }
+
+  /* ---------- معرض الصور ---------- */
+  function photoUrl(id, w) { return 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w' + (w || 400); }
+  function viewGallery() {
+    subShell('معرض الصور', '<p class="hint" style="margin-top:0">الصور تظهر في قسم «من أعمالنا» في صفحة العميل بنفس الترتيب. تُصغَّر تلقائيًا قبل الرفع لتكون سريعة على الجوال، وتُحفظ في Drive داخل مجلد «معرض الصور».</p>' +
+      '<label class="btn btn-gold btn-block" for="photoIn" style="cursor:pointer">+ رفع صور من الجوال أو الكمبيوتر</label>' +
+      '<input type="file" id="photoIn" accept="image/*" multiple class="hidden">' +
+      '<div id="upMsg"></div><div id="ed-gallery" style="margin-top:12px"><div class="loading">جارٍ التحميل…</div></div>');
+    var rows = [], box = $('ed-gallery');
+    function draw(msg) {
+      box.innerHTML = (rows.length ? '<div class="list">' + rows.map(function (r, i) {
+        return '<div class="card pad"><div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:start">' +
+          '<img src="' + photoUrl(r.fileId, 200) + '" alt="" referrerpolicy="no-referrer" style="width:96px;height:96px;object-fit:cover;border-radius:10px;background:var(--sand)">' +
+          '<div><div class="field" style="margin-bottom:8px"><label for="gc' + i + '">الوصف بالعربية</label><input class="input" id="gc' + i + '" data-gi="' + i + '" data-gk="caption_ar" value="' + esc(r.caption_ar || '') + '" placeholder="مثال: استقبال المعازيم"></div>' +
+          '<div class="field" style="margin-bottom:8px"><label for="ge' + i + '">الوصف بالإنجليزية</label><input class="input" id="ge' + i + '" dir="ltr" data-gi="' + i + '" data-gk="caption_en" value="' + esc(r.caption_en || '') + '"></div>' +
+          '<label class="switch"><span>ظاهرة في الموقع</span><input type="checkbox" data-gi="' + i + '" data-gk="active"' + (r.active ? ' checked' : '') + '></label></div></div>' +
+          '<div class="quick" style="margin-top:8px"><button type="button" class="btn btn-sm" data-g="up" data-i="' + i + '"' + (i ? '' : ' disabled') + '>↑ للأعلى</button><button type="button" class="btn btn-sm btn-danger" data-g="del" data-i="' + i + '">حذف الصورة</button></div></div>';
+      }).join('') + '</div>' : '<div class="card empty">لا توجد صور بعد. ارفع أول صورة من الزر أعلاه.</div>') +
+        (msg || '') + (rows.length ? '<button type="button" class="btn btn-dark btn-block" style="margin-top:10px" data-g="save">حفظ الترتيب والأوصاف</button>' : '');
+    }
+    function read() {
+      box.querySelectorAll('[data-gk]').forEach(function (el) { var r = rows[Number(el.getAttribute('data-gi'))]; if (r) r[el.getAttribute('data-gk')] = el.type === 'checkbox' ? el.checked : el.value; });
+    }
+    function save(msgOk) {
+      return api('tables', { action: 'save', table: 'gallery', rows: rows }).then(function (r) { rows = r.rows; draw('<div class="msg ok" style="margin-top:10px">' + (msgOk || 'تم الحفظ ✓') + '</div>'); })
+        .catch(function (er) { draw('<div class="msg err" style="margin-top:10px">' + esc(errText(er)) + '</div>'); });
+    }
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-g]'); if (!b) return;
+      read();
+      var act = b.getAttribute('data-g'), i = Number(b.getAttribute('data-i'));
+      if (act === 'up' && i > 0) { var t = rows[i - 1]; rows[i - 1] = rows[i]; rows[i] = t; draw(); }
+      if (act === 'del' && confirm('حذف هذه الصورة من الموقع؟ (تُنقل إلى سلة المحذوفات في Drive)')) { rows.splice(i, 1); save('حُذفت الصورة ✓'); }
+      if (act === 'save') { b.disabled = true; b.textContent = 'جارٍ الحفظ…'; save(); }
+    });
+    $('photoIn').addEventListener('change', function () {
+      var files = Array.prototype.slice.call(this.files || []); this.value = '';
+      if (!files.length) return;
+      var done = 0, failed = 0, m = $('upMsg');
+      function next() {
+        if (!files.length) { m.innerHTML = '<div class="msg ' + (failed ? 'warn' : 'ok') + '">رُفعت ' + done + ' صورة' + (failed ? '، وتعذّر رفع ' + failed : '') + ' ✓</div>'; return; }
+        var f = files.shift();
+        m.innerHTML = '<div class="msg">جارٍ رفع الصورة ' + (done + failed + 1) + '…</div>';
+        shrinkImage(f, 1600, 0.82).then(function (dataUrl) {
+          return api('upload', { mime: 'image/jpeg', data: dataUrl });
+        }).then(function (r) { rows = r.rows; done++; draw(); next(); })
+          .catch(function (er) { failed++; m.innerHTML = '<div class="msg err">' + esc(errText(er)) + '</div>'; setTimeout(next, 800); });
+      }
+      next();
+    });
+    api('tables', { action: 'get', table: 'gallery' }).then(function (r) { rows = r.rows; draw(); })
+      .catch(function (er) { box.innerHTML = '<div class="msg err">' + esc(errText(er)) + '</div>'; });
+  }
+  /** يصغّر الصورة في المتصفح قبل الرفع (أسرع وأوفر للإنترنت) */
+  function shrinkImage(file, maxSide, quality) {
+    return new Promise(function (resolve, reject) {
+      if (!/^image\//.test(file.type)) return reject(new Error('هذا الملف ليس صورة'));
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var s = Math.min(1, maxSide / Math.max(img.width, img.height));
+        var c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('تعذر قراءة الصورة')); };
+      img.src = url;
+    });
+  }
+
+  /* ---------- رقم الفاتورة ---------- */
+  function viewInvoiceSettings() {
+    var fmt = S.data.settings.invoice_format || 'TBH/{MON}/{NNN}/{YY}';
+    subShell('رقم الفاتورة', '<div class="card pad">' +
+      '<div class="field"><label for="invFmt">نمط رقم الفاتورة</label><input class="input" id="invFmt" dir="ltr" value="' + esc(fmt) + '"></div>' +
+      '<p class="hint" style="margin:0 0 8px">{MON} شهر المناسبة بالإنجليزية (DEC) · {MM} الشهر بالأرقام · {YY} السنة برقمين · {YYYY} السنة كاملة · {NNN} الرقم التسلسلي بثلاث خانات. إذا احتوى النمط على الشهر يبدأ التسلسل من 1 كل شهر، وإلا يبدأ كل سنة.</p>' +
+      '<div class="price-live"><span>مثال لمناسبة في ديسمبر</span><b id="invPrev" dir="ltr"></b></div>' +
+      '<div id="invMsg"></div><button type="button" class="btn btn-dark btn-block" style="margin-top:10px" id="invSave">حفظ النمط</button></div>' +
+      '<div class="h2">آخر رقم مستخدم لكل فترة</div><p class="hint" style="margin-top:0">الفاتورة التالية تأخذ الرقم بعده. بدأتُها من آخر أرقامك في ملف Tibian_Finance_2026 (مثل ديسمبر 2026 = 5، فالتالية 006).</p>' +
+      '<div id="ed-invoiceCounters"><div class="loading">جارٍ التحميل…</div></div>');
+    TABLE_UI.invoiceCounters = TABLE_UI.invoiceCounters || { title: 'العدادات', add: 'إضافة فترة', empty: 'لا توجد عدادات',
+      cols: [{ k: 'period', l: 'الفترة (سنة-شهر) مثل 2026-12', t: 'text', ltr: 1, half: 1 }, { k: 'last', l: 'آخر رقم', t: 'int', half: 1 }],
+      blank: { period: today().slice(0, 7), last: 0 }, label: function (r) { return r.period || 'فترة جديدة'; }, noMove: 1 };
+    function prev() { $('invPrev').textContent = L.formatInvoiceNo($('invFmt').value, 6, today().slice(0, 4) + '-12-07'); }
+    $('invFmt').addEventListener('input', prev); prev();
+    $('invSave').onclick = function () {
+      var v = $('invFmt').value.trim();
+      api('settings', { values: { invoice_format: v } }).then(function () { S.data.settings.invoice_format = v; $('invMsg').innerHTML = '<div class="msg ok">تم الحفظ ✓ — الفواتير الجديدة تأخذ هذا النمط.</div>'; })
+        .catch(function (e) { $('invMsg').innerHTML = '<div class="msg err">' + esc(errText(e)) + '</div>'; });
+    };
+    mountTable($('ed-invoiceCounters'), 'invoiceCounters');
+  }
+
+  /* ---------- البنك والتواصل والشروط ---------- */
+  function setField(key, label, type, hint) {
+    var s = S.data.settings, val = s[key] == null ? '' : s[key];
+    var input = type === 'area' ? '<textarea class="input" data-set="' + key + '" rows="5">' + esc(val) + '</textarea>'
+      : '<input class="input" data-set="' + key + '" value="' + esc(val) + '"' + (type === 'num' ? ' inputmode="numeric"' : '') + (type === 'ltr' ? ' dir="ltr"' : '') + '>';
+    return '<div class="field"><label>' + label + '</label>' + input + (hint ? '<div class="hint">' + hint + '</div>' : '') + '</div>';
+  }
+  function viewGeneral() {
+    var f = setField;
+    subShell('البنك والتواصل والشروط',
+      '<div class="h2">بيانات التحويل البنكي</div><div class="card pad">' + f('bank_name', 'اسم البنك') + f('bank_account_name', 'اسم صاحب الحساب') + f('bank_account_no', 'رقم الحساب', 'ltr') + f('bank_iban', 'IBAN', 'ltr') + '</div>' +
+      '<div class="h2">قواعد الحجز</div><div class="card pad"><div class="grid2">' + f('deposit_percent', 'نسبة العربون %', 'num') + f('balance_days_before', 'المتبقي قبل المناسبة (أيام)', 'num') +
+      f('refund_window_days', 'مدة استرداد العربون (أيام)', 'num') + f('max_events_per_day', 'أقصى مناسبات في اليوم', 'num') + f('followup_days', 'المتابعة بعد العرض (أيام)', 'num') +
+      f('min_guests', 'أقل عدد ضيوف للأسعار', 'num') + '</div>' + f('max_guests', 'أكبر عدد ضيوف للأسعار', 'num') +
+      f('comprehensive_areas', 'مناطق الباقة الشاملة (افصل بفاصلة)', '', 'الباقة الشاملة لا تظهر إلا لهذه المناطق. الافتراضي: مسقط') + '</div>' +
+      '<div class="h2">التواصل</div><div class="card pad">' + f('whatsapp', 'رقم واتساب العمل', 'ltr') + f('instagram', 'رابط إنستغرام', 'ltr') + f('summary_emails', 'إيميلات الملخص اليومي (افصل بفاصلة)', 'ltr') + '</div>' +
+      '<div class="h2">نص الموافقة في صفحة العميل</div><div class="card pad">' + f('consent_text_ar', 'بالعربية', 'area') + f('consent_text_en', 'بالإنجليزية', 'area') + '</div>' +
+      '<div class="h2">شروط الحجز</div><div class="card pad">' + f('terms_ar', 'بالعربية (كل سطر شرط)', 'area') + f('terms_en', 'بالإنجليزية', 'area') + '</div>' +
+      '<div id="setMsg"></div><button class="btn btn-dark btn-block" style="margin-top:12px" data-act="saveSettings">حفظ</button>');
+  }
+
+  /* ---------- رموز الدخول ---------- */
+  function viewSecurity() {
+    var body = (S.data.mustChangePin ? '<div class="msg warn"><b>مهم:</b> رمز الدخول الحالي هو الرمز الافتراضي. غيّره الآن قبل استخدام اللوحة.</div>' : '') +
+      '<div class="card pad">' +
       '<div class="field"><label for="pinA">رمز المدير الجديد</label><input class="input" id="pinA" type="password" inputmode="numeric" maxlength="12" placeholder="6 إلى 12 رقمًا"></div>' +
       '<div class="field"><label for="pinA2">تأكيد الرمز</label><input class="input" id="pinA2" type="password" inputmode="numeric" maxlength="12"></div>' +
       '<button class="btn btn-dark btn-block" data-act="pinAdmin">تغيير رمز المدير</button>' +
@@ -521,25 +797,16 @@
       '<div class="field"><label for="pinS">رمز الموظف ' + (S.data.staffPinSet ? '<span class="chip s-confirmed">مفعّل</span>' : '<span class="chip s-done">غير مفعّل</span>') + '</label>' +
       '<input class="input" id="pinS" type="password" inputmode="numeric" maxlength="12" placeholder="6 إلى 12 رقمًا"><div class="hint">الموظف يرى الحجوزات والمهام دون المبالغ. تغيير أي رمز يسجّل خروج كل الأجهزة.</div></div>' +
       '<div class="quick"><button class="btn" data-act="pinStaff">حفظ رمز الموظف</button>' + (S.data.staffPinSet ? '<button class="btn btn-danger" data-act="pinStaffOff">إيقاف حساب الموظف</button>' : '') + '</div>' +
-      '<div id="pinMsg"></div></div>' +
-      '<div id="setForm"' + (S.data.mustChangePin ? ' class="hidden"' : '') + '>' +
-      '<div class="h2">العرض الحالي</div><div class="card pad"><label class="switch"><span>إظهار العرض في صفحة العميل</span><input type="checkbox" id="offerOn"' + (offerOn ? ' checked' : '') + '></label>' +
-      f('offer_ar', 'نص العرض بالعربية') + f('offer_en', 'نص العرض بالإنجليزية', 'ltr') + '</div>' +
-      '<div class="h2">بيانات التحويل البنكي</div><div class="card pad">' + f('bank_name', 'اسم البنك') + f('bank_account_name', 'اسم صاحب الحساب') + f('bank_account_no', 'رقم الحساب', 'ltr') + f('bank_iban', 'IBAN', 'ltr') + '</div>' +
-      '<div class="h2">محل تجهيز المعرس</div><div class="card pad">' + f('groom_shop_name', 'اسم المحل') + f('groom_shop_map', 'رابط الموقع (خرائط Google)', 'ltr') + '</div>' +
-      '<div class="h2">قواعد الحجز</div><div class="card pad"><div class="grid2">' + f('deposit_percent', 'نسبة العربون %', 'num') + f('balance_days_before', 'المتبقي قبل المناسبة (أيام)', 'num') +
-      f('refund_window_days', 'مدة استرداد العربون (أيام)', 'num') + f('max_events_per_day', 'أقصى مناسبات في اليوم', 'num') + f('followup_days', 'المتابعة بعد العرض (أيام)', 'num') +
-      f('min_guests', 'أقل عدد ضيوف للباقات', 'num') + '</div>' + f('max_guests', 'أكبر عدد ضيوف للباقات', 'num') + '</div>' +
-      '<div class="h2">التواصل</div><div class="card pad">' + f('whatsapp', 'رقم واتساب العمل', 'ltr') + f('instagram', 'رابط إنستغرام', 'ltr') + f('summary_emails', 'إيميلات الملخص اليومي (افصل بفاصلة)', 'ltr') + '</div>' +
-      '<div class="h2">شروط الحجز</div><div class="card pad">' + f('terms_ar', 'بالعربية (كل سطر شرط)', 'area') + f('terms_en', 'بالإنجليزية', 'area') + '</div>' +
-      '<div id="setMsg"></div><button class="btn btn-dark btn-block" style="margin-top:12px" data-act="saveSettings">حفظ الإعدادات</button>' +
-      '<div class="h2">الأتمتة</div><div class="card pad" id="autoBox"><p class="muted small" style="margin:0">جارٍ التحقق…</p></div>' +
-      '<div class="h2">Asana</div><div class="card pad" id="asanaBox"></div>' +
-      '<div class="h2">روابط</div><div class="card pad actions"><a class="btn" href="' + SHEET_URL + '" target="_blank" rel="noopener">فتح جدول البيانات</a><a class="btn" href="' + SITE_URL + '" target="_blank" rel="noopener">صفحة العميل</a></div>' +
-      '<p class="hint" style="margin-top:10px">الأسعار والمواصلات وأنواع المناسبات ونصوص الرسائل تُعدّل من جدول البيانات مباشرة، وتظهر فورًا.</p>' +
-      '</div><button class="btn btn-block" style="margin-top:16px" data-act="logout">تسجيل الخروج</button>';
-    shell('الإعدادات', body);
-    if (!S.data.mustChangePin) { loadAutomation('status'); if (S.data.asanaConnected) loadAsana('status'); else asanaForm(); }
+      '<div id="pinMsg"></div></div>';
+    if (S.data.mustChangePin) shell('رموز الدخول', body); else subShell('رموز الدخول', body);
+  }
+
+  /* ---------- الأتمتة وAsana ---------- */
+  function viewAutomation() {
+    subShell('الأتمتة وAsana', '<div class="h2">الملخص اليومي</div><div class="card pad" id="autoBox"><p class="muted small" style="margin:0">جارٍ التحقق…</p></div>' +
+      '<div class="h2">Asana</div><div class="card pad" id="asanaBox"></div>');
+    loadAutomation('status');
+    if (S.data.asanaConnected) loadAsana('status'); else asanaForm();
   }
   function asanaForm(msg) {
     var box = $('asanaBox'); if (!box) return;
@@ -588,7 +855,7 @@
       S.session = { token: s.token, role: s.role, exp: s.exp }; store(SKEY, S.session);
       if (role === 'admin') S.data.mustChangePin = false;
       if (role === 'staff') S.data.staffPinSet = !!pin;
-      viewSettings();
+      viewSettings('security');
       $('pinMsg').innerHTML = '<div class="msg ok">' + (role === 'admin' ? 'تم تغيير رمز المدير. سُجّل خروج الأجهزة الأخرى.' : (pin ? 'تم حفظ رمز الموظف.' : 'تم إيقاف حساب الموظف.')) + '</div>';
     }).catch(function (e) { m.innerHTML = '<div class="msg err">' + esc(errText(e)) + '</div>'; });
   }
@@ -598,9 +865,6 @@
       var k = el.getAttribute('data-set'), v = el.value;
       if (String(S.data.settings[k] == null ? '' : S.data.settings[k]) !== v) values[k] = v;
     });
-    var on = $('offerOn').checked ? 'نعم' : 'لا';
-    var was = /^(نعم|yes|true|1)$/i.test(String(S.data.settings.offer_active).trim()) ? 'نعم' : 'لا';
-    if (on !== was) values.offer_active = on;
     var m = $('setMsg');
     if (!Object.keys(values).length) { m.innerHTML = '<div class="msg">لا توجد تغييرات</div>'; return; }
     m.innerHTML = '<div class="msg">جارٍ الحفظ…</div>';
@@ -618,6 +882,7 @@
     var act = el.getAttribute('data-act'), id = el.getAttribute('data-id');
     switch (act) {
       case 'wa': e.preventDefault(); sendMsg(id, el.getAttribute('data-key')); break;
+      case 'shopPick': closeSheet(true); sendMsg(id, 'groom_shop_visit', shopVars(el.getAttribute('data-shop'))); break;
       case 'confirm': sheetConfirm(id); break;
       case 'pay': sheetPayment(id); break;
       case 'invoice': makeInvoice(id, el); break;

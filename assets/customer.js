@@ -14,7 +14,15 @@
       pkTitle: 'باقاتنا', pkH: 'باقة الضيافة', pkHsub: 'فريق ضيافة متكامل لاستقبال ضيوفكم وخدمتهم.',
       pkH1: 'مضيفون ومشرفون حسب عدد الضيوف', pkH2: 'تجهيز المجلس وتبخيره وتنظيم الممر الرئيسي',
       pkH3: 'استقبال المعازيم وتطييبهم وتبخيرهم', pkH4: 'تقديم القهوة والحلوى والعشاء والتنسيق مع المطعم',
-      pkC: 'الباقة الشاملة', pkCsub: 'كل ما تحتاجه مناسبتك في باقة واحدة.',
+      pkC: 'الباقة الشاملة', pkCsub: 'كل ما يحتاجه عقد القران في باقة واحدة.', pkCscope: 'لعقود القران (الملكة) داخل محافظة مسقط',
+      consentH: 'قبل أن تبدأ', consentBtn: 'أوافق، لنبدأ', consentErr: 'ضع علامة على الموافقة أولًا لتبدأ.',
+      consentDone: '✓ وافقت على شروط التواصل', consentShow: 'عرض النص',
+      areaNote: 'الباقة الشاملة متاحة داخل محافظة مسقط فقط. للمناسبات خارج مسقط اختر باقة الضيافة.',
+      extras: 'خدمات إضافية تريدها (اختياري)', extrasPh: 'اكتبها بالتفصيل، مثل: حلوى إضافية، تصوير المعرس، ضيافة للنساء…',
+      extrasHint: 'لا تُضاف إلى السعر تلقائيًا؛ نراجعها ونتواصل معك بشأنها.',
+      q9: 'لمن الباقة الشاملة؟', a9: 'الباقة الشاملة مخصصة لعقود القران (الملكة) داخل محافظة مسقط. لبقية المناسبات أو خارج مسقط اختر باقة الضيافة.',
+      pkgOccErr: 'الباقة الشاملة لعقود القران (الملكة) فقط.', pkgAreaErr: 'الباقة الشاملة داخل محافظة مسقط فقط. اختر باقة الضيافة للمناسبات خارج مسقط.',
+      consentReq: 'يلزم الموافقة على شروط التواصل قبل إرسال الطلب.',
       pkC1: 'جميع خدمات باقة الضيافة', pkC2: 'عشاء من لحم البقر الطازج بخيارين', pkC3: 'الحلوى العُمانية',
       pkC4: 'التصوير فوتو وفيديو', pkC5: 'تجهيز المعرس مجانًا',
       offerBadge: 'عرض خاص', from: 'تبدأ من', omr: 'ر.ع', omrLong: 'ريال عُماني', choose: 'اختر هذه الباقة',
@@ -64,7 +72,15 @@
       pkTitle: 'Our packages', pkH: 'Hospitality Package', pkHsub: 'A complete hosting team to welcome and serve your guests.',
       pkH1: 'Hosts and supervisors sized to your guest count', pkH2: 'Majlis setup, incense and main-aisle arrangement',
       pkH3: 'Welcoming guests with perfume and incense', pkH4: 'Serving coffee, sweets and dinner, coordinated with the restaurant',
-      pkC: 'Comprehensive Package', pkCsub: 'Everything your occasion needs in one package.',
+      pkC: 'Comprehensive Package', pkCsub: 'Everything a wedding contract (Milka) needs in one package.', pkCscope: 'For wedding contracts (Milka) within Muscat Governorate',
+      consentH: 'Before you start', consentBtn: 'I agree, let’s start', consentErr: 'Please tick the box to agree first.',
+      consentDone: '✓ You agreed to the contact terms', consentShow: 'Show text',
+      areaNote: 'The Comprehensive Package is available within Muscat Governorate only. For events outside Muscat choose the Hospitality Package.',
+      extras: 'Extra services you would like (optional)', extrasPh: 'Describe them in detail, e.g. extra halwa, groom photography, hospitality for ladies…',
+      extrasHint: 'Not added to the price automatically; we review them and contact you.',
+      q9: 'Who is the Comprehensive Package for?', a9: 'It is for wedding contracts (Milka) within Muscat Governorate. For other occasions or outside Muscat choose the Hospitality Package.',
+      pkgOccErr: 'The Comprehensive Package is for wedding contracts (Milka) only.', pkgAreaErr: 'The Comprehensive Package is available within Muscat only. Choose the Hospitality Package outside Muscat.',
+      consentReq: 'Please agree to the contact terms before sending your request.',
       pkC1: 'All Hospitality Package services', pkC2: 'Fresh beef dinner, two menu options', pkC3: 'Omani halwa',
       pkC4: 'Photo and video coverage', pkC5: 'Free groom preparation',
       offerBadge: 'Special offer', from: 'From', omr: 'OMR', omrLong: 'OMR', choose: 'Choose this package',
@@ -151,12 +167,59 @@
   }
 
   /* ---------------- الإعدادات ---------------- */
+  /* ---------------- العروض والقيود حسب الباقة ---------------- */
+  function offerHtml(o) { var t = state.lang === 'en' ? (o.en || o.ar) : o.ar; return '<p class="offer">' + esc(t) + '</p>'; }
+  function renderOffers() {
+    var all = (state.cfg.offers || []);
+    // توافق مع الإعدادات القديمة (عرض واحد)
+    if (!all.length && state.cfg.offerActive && state.cfg.offer_ar) all = [{ ar: state.cfg.offer_ar, en: state.cfg.offer_en, package: 'الشاملة' }];
+    $('offers').innerHTML = all.slice(0, 3).map(offerHtml).join('');
+    $('offers').classList.toggle('hidden', !all.length);
+    var h = all.filter(function (o) { return o.package === 'الكل' || o.package === 'الضيافة'; });
+    var c = all.filter(function (o) { return o.package === 'الكل' || o.package === 'الشاملة'; });
+    var pill = function (o) { var t = state.lang === 'en' ? (o.en || o.ar) : o.ar; return '<p class="pkg__offer">' + esc(/🎁/.test(t) ? t : '🎁 ' + t) + '</p>'; };
+    $('pkgOffersH').innerHTML = h.map(pill).join(''); $('pkgOffersH').classList.toggle('hidden', !h.length);
+    $('pkgOffersC').innerHTML = c.map(pill).join(''); $('pkgOffersC').classList.toggle('hidden', !c.length);
+    $('pkgBadge').classList.toggle('hidden', !c.length);
+  }
+  /** أنواع المناسبات المتاحة للباقة المختارة (الشاملة: عقد القران فقط) */
+  function renderOccasions(prevOcc) {
+    var en = state.lang === 'en', p = pkg();
+    var list = L.occasionsFor(state.cfg.occasions || [], p);
+    if (prevOcc && !list.some(function (o) { return o.ar === prevOcc; })) prevOcc = '';
+    if (!prevOcc && list.length === 1) prevOcc = list[0].ar;
+    $('occasion').innerHTML = list.map(function (o) {
+      return '<label><input type="radio" name="occasion" value="' + esc(o.ar) + '"' + (prevOcc === o.ar ? ' checked' : '') + '><span>' + esc(en ? (o.en || o.ar) : o.ar) + '</span></label>';
+    }).join('');
+    $('occasion').classList.toggle('chips--grid', list.length > 1);
+  }
+  /** المناطق المتاحة: الشاملة داخل مسقط فقط */
+  function renderAreas(prevArea) {
+    var p = pkg(), allowed = state.cfg.comprehensiveAreas || ['مسقط'];
+    var areas = [{ v: 'مسقط', t: tr('muscat') }].concat((state.cfg.travel || []).filter(function (a) { return a.name !== 'مسقط'; }).map(function (a) { return { v: a.name, t: a.name }; }))
+      .concat([{ v: '__other', t: tr('otherArea') }])
+      .filter(function (a) { return p !== 'comprehensive' || allowed.indexOf(a.v) >= 0; });
+    $('area').innerHTML = areas.map(function (a) { return '<option value="' + esc(a.v) + '">' + esc(a.t) + '</option>'; }).join('');
+    if (prevArea && areas.some(function (a) { return a.v === prevArea; })) $('area').value = prevArea;
+    $('areaNote').classList.toggle('hidden', p !== 'comprehensive');
+  }
+
+  /* ---------------- الموافقة قبل البدء ---------------- */
+  var CONSENT_KEY = 'tibian_consent_v1';
+  function setConsent(on, remember) {
+    state.consent = !!on;
+    $('form').classList.toggle('locked', !on);
+    $('form').querySelectorAll('fieldset').forEach(function (fs) { fs.disabled = !on; });
+    $('consentCard').classList.toggle('hidden', on);
+    $('consentDone').classList.toggle('hidden', !on);
+    if (remember) store(CONSENT_KEY, on ? new Date().toISOString() : null);
+    updateSticky();
+  }
+
   function renderConfig(keep) {
     var c = state.cfg, en = state.lang === 'en';
-    var offerTxt = c.offerActive ? (en ? c.offer_en : c.offer_ar) : '';
-    $('offer').classList.toggle('hidden', !offerTxt); $('offer').textContent = offerTxt || '';
-    $('pkgOffer').classList.toggle('hidden', !offerTxt); $('pkgOffer').textContent = offerTxt ? (/🎁/.test(offerTxt) ? offerTxt : '🎁 ' + offerTxt) : '';
-    $('pkgBadge').classList.toggle('hidden', !offerTxt);
+    renderOffers();
+    $('consentText').textContent = (en ? c.consent_en : c.consent_ar) || $('consentText').textContent;
     var t0 = (c.tiers || [])[0];
     if (t0) { $('fromH').textContent = money(Math.min.apply(null, c.tiers.map(function (t) { return t.hospitality; }))); $('fromC').textContent = money(Math.min.apply(null, c.tiers.map(function (t) { return t.comprehensive; }))); }
     $('terms').innerHTML = String((en ? c.terms_en : c.terms_ar) || '').split(/\n+/).filter(Boolean).map(function (l) { return '<li>' + esc(l.replace(/^[•\-\d.\s]+/, '')) + '</li>'; }).join('');
@@ -165,17 +228,11 @@
       : 'من ' + c.minGuests + ' إلى ' + c.maxGuests + ' ضيف. لغير ذلك نجهّز لك باقة خاصة.';
 
     var prev = keep ? { occ: val('occasion'), time: val('time'), area: $('area').value, dinner: val('dinner') } : {};
-    $('occasion').innerHTML = (c.occasions || []).map(function (o, i) {
-      return '<label><input type="radio" name="occasion" value="' + esc(o.ar) + '"' + (prev.occ === o.ar ? ' checked' : '') + '><span>' + esc(en ? (o.en || o.ar) : o.ar) + '</span></label>';
-    }).join('');
+    renderOccasions(prev.occ);
     $('time').innerHTML = (c.times || []).map(function (o) {
       return '<label><input type="radio" name="time" value="' + esc(o.ar) + '"' + (prev.time === o.ar ? ' checked' : '') + '><span>' + esc(en ? (o.en || o.ar) : o.ar) + '</span></label>';
     }).join('');
-    var others = (c.travel || []).filter(function (a) { return a.name !== 'مسقط'; });
-    $('area').innerHTML = '<option value="مسقط">' + esc(tr('muscat')) + '</option>' +
-      others.map(function (a) { return '<option value="' + esc(a.name) + '">' + esc(a.name) + '</option>'; }).join('') +
-      '<option value="__other">' + esc(tr('otherArea')) + '</option>';
-    if (prev.area) $('area').value = prev.area;
+    renderAreas(prev.area);
     var din = prev.dinner || L.DINNER[0].ar;
     $('dinner').innerHTML = L.DINNER.map(function (d) {
       return '<label><input type="radio" name="dinner" value="' + esc(d.ar) + '"' + (din === d.ar ? ' checked' : '') + '><span>' + esc(en ? d.en : d.ar) + '</span></label>';
@@ -188,6 +245,7 @@
     if (c.instagram) ['igTop', 'ftIg', 'igMore'].forEach(function (id) { $(id).href = c.instagram; });
     if (c.email) { $('ftMail').href = 'mailto:' + c.email; $('ftMail').textContent = c.email; }
     if (c.cr) $('crNo').textContent = c.cr;
+    renderGallery();
     calc();
     checkDate();
   }
@@ -272,7 +330,7 @@
       package: pkg(), occasion: val('occasion'), guests: guests(), date: $('date').value, time: val('time'),
       area: $('area').value, location: $('location').value.trim(), dinner: pkg() === 'comprehensive' ? val('dinner') : '',
       name: $('name').value.trim(), phone: digits($('phone').value), notes: $('notes').value.trim(), website: $('website').value,
-      lang: state.lang
+      extras: $('extras').value.trim(), consent: !!state.consent, lang: state.lang
     };
   }
   function markInvalid(fieldId, on) { var f = $(fieldId); if (f) f.classList.toggle('invalid', on); }
@@ -293,6 +351,7 @@
   function submit(ev) {
     if (ev) ev.preventDefault();
     var f = collect(), v = validate(f), err = $('err');
+    if (!f.consent) { setConsent(false); $('consentCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     if (!v.ok) {
       err.textContent = v.msg; err.classList.remove('hidden');
       if (v.first) { v.first.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(function () { try { (v.first.querySelector('input') || v.first).focus({ preventScroll: true }); } catch (e) {} }, 350); }
@@ -307,9 +366,11 @@
       if (e.code === 'phone') { err.textContent = tr('badPhone'); err.classList.remove('hidden'); markInvalid('f-phone', true); $('phone').focus(); return; }
       if (e.code === 'rate') { err.textContent = tr('tooMany'); err.classList.remove('hidden'); return; }
       if (e.code === 'date') { markInvalid('f-date', true); err.textContent = tr('datePast'); err.classList.remove('hidden'); return; }
+      if (e.code === 'consent') { setConsent(false, true); err.textContent = tr('consentReq'); err.classList.remove('hidden'); return; }
+      if (e.code === 'pkg_occasion' || e.code === 'pkg_area') { err.textContent = tr(e.code === 'pkg_area' ? 'pkgAreaErr' : 'pkgOccErr'); err.classList.remove('hidden'); renderOccasions(val('occasion')); renderAreas($('area').value); return; }
       // مشكلة اتصال: نجهز الرسالة محليًا ونحفظ الطلب لإعادة المحاولة
       var c = state.cfg, q = L.quote(c, f.package, f.guests, f.area);
-      var text = L.fill(q.special ? c.templates.special_request : c.templates.customer_request, L.requestVars(f, q, '—'));
+      var text = L.requestMessage(q.special ? c.templates.special_request : c.templates.customer_request, f, q, '—');
       var pending = store(PENDING_KEY) || []; pending.push(f); store(PENDING_KEY, pending.slice(-5));
       API.beacon({ action: 'inquiry', data: f });
       showDone('', text, c.whatsapp, true);
@@ -369,8 +430,22 @@
   }
 
   /* ---------------- المعرض ---------------- */
+  /** صورة من Drive (مشاركة عامة) — الرابط الأول أسرع، والثاني احتياطي */
+  function driveImg(id) { return 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w1200'; }
   function renderGallery() {
     var icon = '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg>';
+    var photos = (state.cfg && state.cfg.gallery) || [];
+    if (photos.length) {
+      var en = state.lang === 'en';
+      $('galleryGrid').innerHTML = photos.slice(0, 24).map(function (g, i) {
+        var cap = en ? (g.en || g.ar || '') : (g.ar || '');
+        var wide = photos.length % 2 === 1 ? i === 0 : (i === 0 || i === photos.length - 1);
+        return '<figure class="' + (wide ? 'wide' : '') + '"><img src="' + driveImg(g.id) + '" alt="' + esc(cap || tr('galTitle')) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer"' +
+          ' onerror="if(!this.dataset.f){this.dataset.f=1;this.src=\'https://drive.google.com/thumbnail?id=' + encodeURIComponent(g.id) + '&sz=w1200\'}">' +
+          (cap ? '<figcaption>' + esc(cap) + '</figcaption>' : '') + '</figure>';
+      }).join('');
+      return;
+    }
     $('galleryGrid').innerHTML = GALLERY.map(function (g) {
       return '<figure class="' + (g.wide ? 'wide' : '') + '">' + (g.src ? '<img src="' + g.src + '" alt="' + esc(tr(g.t)) + '" loading="lazy" decoding="async" onerror="this.remove()">' : '') +
         '<div class="ph">' + icon + '<span>' + esc(tr('soon')) + '</span></div><figcaption>' + esc(tr(g.t)) + '</figcaption></figure>';
@@ -394,7 +469,17 @@
 
     $('langBtn').addEventListener('click', function () { state.lang = state.lang === 'ar' ? 'en' : 'ar'; store(LANG_KEY, state.lang); applyLang(); });
     $('form').addEventListener('submit', submit);
+    // الموافقة: من وافق سابقًا على هذا الجهاز لا يُسأل مرة أخرى
+    setConsent(!!store(CONSENT_KEY));
+    $('consentBtn').addEventListener('click', function () {
+      if (!$('consent').checked) { $('consentErr').classList.remove('hidden'); return; }
+      $('consentErr').classList.add('hidden');
+      setConsent(true, true);
+    });
+    $('consent').addEventListener('change', function () { if (this.checked) $('consentErr').classList.add('hidden'); });
+    $('consentShow').addEventListener('click', function () { $('consentCard').classList.remove('hidden'); $('consent').checked = true; $('consentDone').classList.add('hidden'); });
     $('form').addEventListener('change', function (e) {
+      if (e.target.name === 'package') { renderOccasions(val('occasion')); renderAreas($('area').value); }
       if (e.target.name === 'package' || e.target.id === 'area') calc();
       if (e.target.id === 'date') { checkDate(); calc(); markInvalid('f-date', false); }
       if (e.target.name === 'occasion' || e.target.name === 'time') e.target.closest('.field').classList.remove('invalid');
@@ -405,7 +490,7 @@
     document.querySelectorAll('[data-pick]').forEach(function (b) {
       b.addEventListener('click', function () {
         var r = document.querySelector('input[name="package"][value="' + b.getAttribute('data-pick') + '"]');
-        r.checked = true; calc();
+        r.checked = true; renderOccasions(val('occasion')); renderAreas($('area').value); calc();
         $('calc').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
