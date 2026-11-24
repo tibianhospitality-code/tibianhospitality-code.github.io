@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var L = window.TibianLogic, API = window.TibianApi;
-  var SKEY = 'tibian_admin_session', DKEY = 'tibian_device';
+  var SKEY = 'tibian_admin_session', DKEY = 'tibian_device', CKEY = 'tibian_admin_data';
   var SHEET_URL = 'https://docs.google.com/spreadsheets/d/1hdHMqBENVAQP66jhdrIlLTC8V8XYVc2LP5EP4k9Prss/edit';
   var SITE_URL = '../';
   var S = { session: null, data: null, byId: {}, filter: { q: '', st: 'open' }, busy: false };
@@ -80,13 +80,16 @@
     var i = S.data.bookings.findIndex(function (x) { return x.id === b.id; });
     if (i >= 0) S.data.bookings[i] = b; else S.data.bookings.push(b);
     S.byId[b.id] = b;
+    saveData();
   }
+  /** نسخة محلية من آخر بيانات لفتح اللوحة فورًا، ثم تُحدَّث في الخلفية */
+  function saveData() { if (S.session && S.data) store(CKEY, { role: S.session.role, at: Date.now(), d: S.data }); }
   function load(quiet) {
     var btn = document.querySelector('[data-act="refresh"]');
     if (btn) btn.classList.add('spin');
     if (!quiet && !S.data) $('app').innerHTML = '<div class="loading">جارٍ تحميل البيانات…</div>';
     return api('data').then(function (d) {
-      S.data = d; indexBookings(); render();
+      S.data = d; indexBookings(); saveData(); render();
     }).catch(function (e) {
       if (e.code !== 'auth') { if (!S.data) $('app').innerHTML = '<div class="loading">' + esc(errText(e)) + '<br><br><button class="btn" data-act="refresh">إعادة المحاولة</button></div>'; else toast(errText(e)); }
     }).then(function () { var b = document.querySelector('[data-act="refresh"]'); if (b) b.classList.remove('spin'); });
@@ -192,7 +195,7 @@
     };
   }
   function logout(expired) {
-    S.session = null; S.data = null; store(SKEY, null);
+    S.session = null; S.data = null; store(SKEY, null); store(CKEY, null);
     viewLogin(expired ? 'انتهت الجلسة، سجّل الدخول من جديد' : '');
   }
 
@@ -928,7 +931,10 @@
   function start() {
     var s = store(SKEY);
     if (s && s.token && s.exp > Date.now()) S.session = s;
-    render();
+    var c = S.session && store(CKEY);
+    if (c && c.d && c.role === S.session.role && Date.now() - c.at < 7 * 864e5) {
+      S.data = c.d; indexBookings(); render(); load(true);
+    } else render();
   }
   if (API.mock && !window.TIBIAN_MOCK_ADMIN) {
     var sc = document.createElement('script'); sc.src = '../_admin_mock.js'; sc.onload = start; sc.onerror = start; document.head.appendChild(sc);
