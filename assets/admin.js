@@ -80,6 +80,7 @@
     var i = S.data.bookings.findIndex(function (x) { return x.id === b.id; });
     if (i >= 0) S.data.bookings[i] = b; else S.data.bookings.push(b);
     S.byId[b.id] = b;
+    S.mut = (S.mut || 0) + 1;
     saveData();
   }
   /** نسخة محلية من آخر بيانات لفتح اللوحة فورًا، ثم تُحدَّث في الخلفية */
@@ -88,8 +89,14 @@
     var btn = document.querySelector('[data-act="refresh"]');
     if (btn) btn.classList.add('spin');
     if (!quiet && !S.data) $('app').innerHTML = '<div class="loading">جارٍ تحميل البيانات…</div>';
+    var m0 = S.mut || 0;
     return api('data').then(function (d) {
-      S.data = d; indexBookings(); saveData(); render();
+      // إن عدّلت شيئًا أثناء التحميل فهذه البيانات أقدم من تعديلك: نعيد التحميل بدل الكتابة فوقه
+      if ((S.mut || 0) !== m0) return load(true);
+      var editing = S.data && ($('sheet') || /^(new|edit|settings)$/.test(route()[0]) && (route()[0] !== 'settings' || route()[1]));
+      S.data = d; indexBookings(); saveData();
+      // لا نعيد رسم صفحة فيها نموذج مفتوح حتى لا يضيع ما كتبته
+      if (!editing || !quiet) render();
     }).catch(function (e) {
       if (e.code !== 'auth') { if (!S.data) $('app').innerHTML = '<div class="loading">' + esc(errText(e)) + '<br><br><button class="btn" data-act="refresh">إعادة المحاولة</button></div>'; else toast(errText(e)); }
     }).then(function () { var b = document.querySelector('[data-act="refresh"]'); if (b) b.classList.remove('spin'); });

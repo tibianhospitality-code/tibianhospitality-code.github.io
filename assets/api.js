@@ -57,7 +57,8 @@
         }
         if (action === 'availability') return resolve({ date: q.date, used: 1, available: true });
         if (action === 'inquiry') {
-          var f = q.data, cfg2 = C.fallback;
+          var f = q.data, cfg2 = JSON.parse(JSON.stringify(C.fallback));
+          cfg2.travel = [{ name: 'مسقط', fee: 0, appliesTo: 'الكل' }, { name: 'بركاء', fee: 20, appliesTo: 'باقة الضيافة' }, { name: 'نزوى', fee: 35, appliesTo: 'باقة الضيافة' }];
           if (!L.validPhone(f.phone)) { var e2 = new Error('invalid phone'); e2.code = 'phone'; return reject(e2); }
           var qq = L.quote(cfg2, f.package, f.guests, f.area);
           var id = 'T' + (mockSeq++);

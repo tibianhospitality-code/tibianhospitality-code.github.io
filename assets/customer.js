@@ -431,17 +431,21 @@
 
   /* ---------------- المعرض ---------------- */
   /** صورة من Drive (مشاركة عامة) — الرابط الأول أسرع، والثاني احتياطي */
-  function driveImg(id) { return 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w1200'; }
+  function driveImg(id, w) { return 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w' + (w || 1200); }
+  var galleryKey = '';
   function renderGallery() {
     var icon = '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg>';
     var photos = (state.cfg && state.cfg.gallery) || [];
+    var key = state.lang + JSON.stringify(photos);
+    if (key === galleryKey) return; // لا نعيد بناء المعرض إن لم يتغير
+    galleryKey = key;
     if (photos.length) {
       var en = state.lang === 'en';
       $('galleryGrid').innerHTML = photos.slice(0, 24).map(function (g, i) {
         var cap = en ? (g.en || g.ar || '') : (g.ar || '');
         var wide = photos.length % 2 === 1 ? i === 0 : (i === 0 || i === photos.length - 1);
-        return '<figure class="' + (wide ? 'wide' : '') + '"><img src="' + driveImg(g.id) + '" alt="' + esc(cap || tr('galTitle')) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer"' +
-          ' onerror="if(!this.dataset.f){this.dataset.f=1;this.src=\'https://drive.google.com/thumbnail?id=' + encodeURIComponent(g.id) + '&sz=w1200\'}">' +
+        return '<figure class="' + (wide ? 'wide' : '') + '"><img src="' + driveImg(g.id, wide ? 1200 : 700) + '" alt="' + esc(cap || tr('galTitle')) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer"' +
+          ' onerror="if(!this.dataset.f){this.dataset.f=1;this.src=\'https://drive.google.com/thumbnail?id=' + encodeURIComponent(g.id) + '&sz=w' + (wide ? 1200 : 700) + '\'}">' +
           (cap ? '<figcaption>' + esc(cap) + '</figcaption>' : '') + '</figure>';
       }).join('');
       return;
