@@ -206,13 +206,20 @@
 
   /* ---------------- الموافقة قبل البدء ---------------- */
   var CONSENT_KEY = 'tibian_consent_v1';
+  /** المحفوظ: نص تاريخ (قديم: موافقة شاملة للتسويق) أو { at, marketing } */
+  function savedConsent() {
+    var v = store(CONSENT_KEY);
+    if (!v) return null;
+    return typeof v === 'string' ? { at: v, marketing: true } : v;
+  }
   function setConsent(on, remember) {
     state.consent = !!on;
+    state.marketing = !!on && $('marketing').checked;
     $('form').classList.toggle('locked', !on);
     $('form').querySelectorAll('fieldset').forEach(function (fs) { fs.disabled = !on; });
     $('consentCard').classList.toggle('hidden', on);
     $('consentDone').classList.toggle('hidden', !on);
-    if (remember) store(CONSENT_KEY, on ? new Date().toISOString() : null);
+    if (remember) store(CONSENT_KEY, on ? { at: new Date().toISOString(), marketing: state.marketing } : null);
     updateSticky();
   }
 
@@ -220,6 +227,7 @@
     var c = state.cfg, en = state.lang === 'en';
     renderOffers();
     $('consentText').textContent = (en ? c.consent_en : c.consent_ar) || $('consentText').textContent;
+    $('marketingText').textContent = (en ? c.marketing_en : c.marketing_ar) || $('marketingText').textContent;
     var t0 = (c.tiers || [])[0];
     if (t0) { $('fromH').textContent = money(Math.min.apply(null, c.tiers.map(function (t) { return t.hospitality; }))); $('fromC').textContent = money(Math.min.apply(null, c.tiers.map(function (t) { return t.comprehensive; }))); }
     $('terms').innerHTML = String((en ? c.terms_en : c.terms_ar) || '').split(/\n+/).filter(Boolean).map(function (l) { return '<li>' + esc(l.replace(/^[•\-\d.\s]+/, '')) + '</li>'; }).join('');
@@ -330,7 +338,7 @@
       package: pkg(), occasion: val('occasion'), guests: guests(), date: $('date').value, time: val('time'),
       area: $('area').value, location: $('location').value.trim(), dinner: pkg() === 'comprehensive' ? val('dinner') : '',
       name: $('name').value.trim(), phone: digits($('phone').value), notes: $('notes').value.trim(), website: $('website').value,
-      extras: $('extras').value.trim(), consent: !!state.consent, lang: state.lang
+      extras: $('extras').value.trim(), consent: !!state.consent, marketing: !!state.marketing, lang: state.lang
     };
   }
   function markInvalid(fieldId, on) { var f = $(fieldId); if (f) f.classList.toggle('invalid', on); }
@@ -474,7 +482,9 @@
     $('langBtn').addEventListener('click', function () { state.lang = state.lang === 'ar' ? 'en' : 'ar'; store(LANG_KEY, state.lang); applyLang(); });
     $('form').addEventListener('submit', submit);
     // الموافقة: من وافق سابقًا على هذا الجهاز لا يُسأل مرة أخرى
-    setConsent(!!store(CONSENT_KEY));
+    var sc = savedConsent();
+    if (sc) { $('consent').checked = true; $('marketing').checked = !!sc.marketing; }
+    setConsent(!!sc);
     $('consentBtn').addEventListener('click', function () {
       if (!$('consent').checked) { $('consentErr').classList.remove('hidden'); return; }
       $('consentErr').classList.add('hidden');

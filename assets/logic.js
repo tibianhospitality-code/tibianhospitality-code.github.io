@@ -410,13 +410,91 @@ var TibianLogic = (function () {
     var seen = {}, sent = {};
     (alreadySent || []).forEach(function (p) { sent[normPhone(p)] = true; });
     var out = [];
+    var optedOut = {};
+    all.forEach(function (b) { if (!marketingAllowed(b)) optedOut[normPhone(b.phone)] = true; });
     all.forEach(function (b) {
       var p = normPhone(b.phone);
       if (!p || seen[p] || b.status === STATUS.CANCELLED) return;
       seen[p] = true;
+      if (optedOut[p]) return; // لم يوافق على الرسائل التسويقية
       out.push({ id: b.id, name: b.name, phone: p, sent: !!sent[p] });
     });
     return out;
+  }
+
+  /** موافقة التسويق: «لا» صريحة فقط تمنع؛ الحجوزات القديمة كانت موافقتها شاملة للتسويق */
+  function marketingAllowed(b) { return !/^(لا|no|false|0)$/i.test(String((b && b.marketing) || '').trim()); }
+
+  /* ---------------- التقويم ---------------- */
+
+  /**
+   * شبكة شهر للتقويم (الأسبوع يبدأ السبت). لكل يوم: عدد الحجوزات المؤكدة، والطلبات المفتوحة، وهل اكتمل.
+   * الخلايا الفارغة قبل بداية الشهر = null.
+   */
+  function calendarMonth(all, ym, maxEvents, todayYmd) {
+    var max = Number(maxEvents) || 4;
+    var first = parseYmd(ym + '-01');
+    var lead = (first.getUTCDay() + 1) % 7; // السبت = 0
+    var days = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+    var by = {};
+    all.forEach(function (b) {
+      if (!b.date || String(b.date).slice(0, 7) !== ym) return;
+      var d = by[b.date] = by[b.date] || { booked: 0, open: 0 };
+      if (BOOKED.indexOf(b.status) >= 0) d.booked++;
+      else if (OPEN.indexOf(b.status) >= 0) d.open++;
+    });
+    var cells = [];
+    for (var i = 0; i < lead; i++) cells.push(null);
+    for (var n = 1; n <= days; n++) {
+      var ymd = ym + '-' + (n < 10 ? '0' : '') + n, c = by[ymd] || { booked: 0, open: 0 };
+      cells.push({ ymd: ymd, day: n, booked: c.booked, open: c.open, full: c.booked >= max, past: !!todayYmd && ymd < todayYmd, today: ymd === todayYmd });
+    }
+    while (cells.length % 7) cells.push(null);
+    return cells;
+  }
+  function addMonths(ym, k) {
+    var y = Number(ym.slice(0, 4)), m = Number(ym.slice(5, 7)) - 1 + k;
+    y += Math.floor(m / 12); m = ((m % 12) + 12) % 12;
+    return y + '-' + (m < 9 ? '0' : '') + (m + 1);
+  }
+
+  /* ---------------- التقرير المالي ---------------- */
+
+  /**
+   * تقرير سنة: لكل شهر (حسب تاريخ المناسبة) عدد المناسبات وقيمتها والمتبقي منها،
+   * والمحصّل (حسب تاريخ الدفعة). الملغاة لا تدخل في القيمة، لكن ما دُفع فيها يظهر كمحتجز.
+   */
+  function financeReport(all, payments, year) {
+    year = String(year);
+    var months = [];
+    for (var i = 0; i < 12; i++) months.push({ m: i + 1, events: 0, value: 0, collected: 0, outstanding: 0, hospitality: 0, comprehensive: 0 });
+    var tot = { events: 0, value: 0, collected: 0, outstanding: 0, hospitality: 0, comprehensive: 0, cancelled: 0, retained: 0, inquiries: 0 };
+    var methods = {};
+    all.forEach(function (b) {
+      if (String(b.created || '').slice(0, 4) === year) tot.inquiries++;
+      if (!b.date || String(b.date).slice(0, 4) !== year) return;
+      if (b.status === STATUS.CANCELLED) {
+        if (Number(b.paid) > 0) { tot.cancelled++; tot.retained = round3(tot.retained + Number(b.paid)); }
+        return;
+      }
+      if (BOOKED.indexOf(b.status) < 0) return;
+      var r = months[Number(String(b.date).slice(5, 7)) - 1];
+      r.events++; r.value = round3(r.value + (Number(b.total) || 0)); r.outstanding = round3(r.outstanding + Math.max(0, Number(b.balance) || 0));
+      if (b.package === 'comprehensive') r.comprehensive++; else r.hospitality++;
+    });
+    (payments || []).forEach(function (p) {
+      if (!p.date || String(p.date).slice(0, 4) !== year) return;
+      var r = months[Number(String(p.date).slice(5, 7)) - 1];
+      r.collected = round3(r.collected + (Number(p.amount) || 0));
+      var k = String(p.method || 'أخرى').trim() || 'أخرى';
+      methods[k] = round3((methods[k] || 0) + (Number(p.amount) || 0));
+    });
+    months.forEach(function (r) {
+      ['events', 'hospitality', 'comprehensive'].forEach(function (k) { tot[k] += r[k]; });
+      ['value', 'collected', 'outstanding'].forEach(function (k) { tot[k] = round3(tot[k] + r[k]); });
+    });
+    tot.avg = tot.events ? round3(tot.value / tot.events) : 0;
+    return { year: Number(year), months: months, total: tot, methods: Object.keys(methods).map(function (k) { return { method: k, amount: methods[k] }; }).sort(function (a, b) { return b.amount - a.amount; }) };
   }
 
   return {
@@ -431,7 +509,8 @@ var TibianLogic = (function () {
     occasionAllowed: occasionAllowed, occasionsFor: occasionsFor, areaAllowed: areaAllowed,
     MONTHS: MONTHS, formatInvoiceNo: formatInvoiceNo, invoiceCounterKey: invoiceCounterKey, parseInvoiceSeq: parseInvoiceSeq,
     bankText: bankText, bookingVars: bookingVars, templateKey: templateKey, MONEY_MESSAGES: MONEY_MESSAGES,
-    afterMessage: afterMessage, sentToday: sentToday, dashboard: dashboard, monthStats: monthStats, greetingList: greetingList
+    afterMessage: afterMessage, sentToday: sentToday, dashboard: dashboard, monthStats: monthStats, greetingList: greetingList,
+    marketingAllowed: marketingAllowed, calendarMonth: calendarMonth, addMonths: addMonths, financeReport: financeReport
   };
 })();
 

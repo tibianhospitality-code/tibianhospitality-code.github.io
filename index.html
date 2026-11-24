@@ -31,7 +31,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"></noscript>
-<link rel="stylesheet" href="assets/site.css?v=5">
+<link rel="stylesheet" href="assets/site.css?v=6">
 
 <script type="application/ld+json">
 {
@@ -123,7 +123,11 @@
         <h3 class="consent__h" data-t="consentH">قبل أن تبدأ</h3>
         <label class="consent__row" for="consent">
           <input type="checkbox" id="consent">
-          <span id="consentText">أوافق على أن تستخدم تبيان للضيافة اسمي ورقم هاتفي وبيانات مناسبتي للتواصل معي بخصوص طلبي، ولإرسال عروض وتسويق من تبيان والجهات التابعة لتبيان للأعمال. ويمكنني طلب إيقاف الرسائل التسويقية في أي وقت.</span>
+          <span id="consentText">أوافق على أن تستخدم تبيان للضيافة اسمي ورقم هاتفي وبيانات مناسبتي للتواصل معي بخصوص طلبي وحجزي.</span>
+        </label>
+        <label class="consent__row consent__row--opt" for="marketing">
+          <input type="checkbox" id="marketing">
+          <span id="marketingText">(اختياري) أرغب في استلام العروض والرسائل التسويقية من تبيان والجهات التابعة لتبيان للأعمال، ويمكنني إيقافها في أي وقت.</span>
         </label>
         <button type="button" class="btn btn--gold btn--block" id="consentBtn" data-t="consentBtn">أوافق، لنبدأ</button>
         <p class="consent__err hidden" id="consentErr" role="alert" data-t="consentErr">ضع علامة على الموافقة أولًا لتبدأ.</p>
@@ -300,9 +304,9 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="assets/config.js?v=5"></script>
-<script src="assets/logic.js?v=5"></script>
-<script src="assets/api.js?v=5"></script>
-<script src="assets/customer.js?v=5"></script>
+<script src="assets/config.js?v=6"></script>
+<script src="assets/logic.js?v=6"></script>
+<script src="assets/api.js?v=6"></script>
+<script src="assets/customer.js?v=6"></script>
 </body>
 </html>

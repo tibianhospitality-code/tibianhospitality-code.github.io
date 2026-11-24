@@ -51,6 +51,8 @@
   }
 
   var IC = {
+    cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+    chart: '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
     home: '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
     list: '<svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>',
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
@@ -179,8 +181,84 @@
       case 'edit': return viewForm(r[1]);
       case 'greetings': return viewGreetings(r[1] ? decodeURIComponent(r[1]) : '');
       case 'settings': return viewSettings(r[1]);
+      case 'calendar': return viewCalendar(r[1], r[2]);
+      case 'finance': return isAdmin() ? viewFinance(r[1]) : viewHome();
       default: return viewHome();
     }
+  }
+
+  /* ================= التقويم ================= */
+  var MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  function monthTitle(ym) { return MONTHS_AR[Number(ym.slice(5, 7)) - 1] + ' ' + ym.slice(0, 4); }
+  function viewCalendar(ym, sel) {
+    if (!/^\d{4}-\d{2}$/.test(ym || '')) ym = today().slice(0, 7);
+    if (!sel || sel.slice(0, 7) !== ym) sel = today().slice(0, 7) === ym ? today() : '';
+    var max = Number(S.data.settings.max_events_per_day) || 4;
+    var cells = L.calendarMonth(S.data.bookings, ym, max, today());
+    var head = ['س', 'ح', 'ن', 'ث', 'ر', 'خ', 'ج'].map(function (d) { return '<div class="cal-h">' + d + '</div>'; }).join('');
+    var grid = cells.map(function (c) {
+      if (!c) return '<div class="cal-d empty"></div>';
+      var cls = 'cal-d' + (c.full ? ' full' : c.booked ? ' some' : '') + (c.past ? ' past' : '') + (c.today ? ' today' : '') + (c.ymd === sel ? ' sel' : '');
+      return '<a class="' + cls + '" href="#calendar/' + ym + '/' + c.ymd + '" aria-label="' + esc(shortDate(c.ymd)) + '"><b>' + c.day + '</b>' +
+        (c.booked ? '<span class="n">' + c.booked + '/' + max + '</span>' : '') + (c.open ? '<i class="dot" title="طلبات مفتوحة"></i>' : '') + '</a>';
+    }).join('');
+    var monthBk = S.data.bookings.filter(function (b) { return String(b.date).slice(0, 7) === ym && L.BOOKED.indexOf(b.status) >= 0; });
+    var day = sel ? S.data.bookings.filter(function (b) { return b.date === sel && b.status !== ST.CANCELLED; })
+      .sort(function (a, b) { return (L.BOOKED.indexOf(b.status) >= 0) - (L.BOOKED.indexOf(a.status) >= 0); }) : [];
+    var used = sel ? day.filter(function (b) { return L.BOOKED.indexOf(b.status) >= 0; }).length : 0;
+    shell('التقويم',
+      '<div class="cal-nav"><a class="btn btn-sm" href="#calendar/' + L.addMonths(ym, -1) + '" aria-label="الشهر السابق">→</a><b>' + esc(monthTitle(ym)) + '</b><a class="btn btn-sm" href="#calendar/' + L.addMonths(ym, 1) + '" aria-label="الشهر التالي">←</a></div>' +
+      '<div class="card cal">' + head + grid + '</div>' +
+      '<div class="cal-key"><span><i class="k some"></i>محجوز جزئيًا</span><span><i class="k full"></i>مكتمل</span><span><i class="dot"></i>طلب مفتوح</span></div>' +
+      '<p class="muted small" style="margin:8px 0 0">مناسبات مؤكدة هذا الشهر: <b>' + monthBk.length + '</b>' + (ym !== today().slice(0, 7) ? ' · <a href="#calendar">العودة لليوم</a>' : '') + '</p>' +
+      (sel ? '<div class="h2">' + esc(shortDate(sel)) + ' <span class="count">' + used + '/' + max + '</span>' + (used >= max ? '<span class="sub">اليوم مكتمل</span>' : '<span class="sub">متاح ' + (max - used) + '</span>') + '</div>' +
+        '<div class="list">' + (day.length ? day.map(function (b) { return rowHtml(b, null, null).replace('<div class="meta">', '<div class="meta">' + chip(b.status) + ' '); }).join('') : '<div class="card empty">لا توجد حجوزات في هذا اليوم</div>') + '</div>' : ''),
+      { back: '#home' });
+  }
+
+  /* ================= التقرير المالي (للمدير) ================= */
+  function viewFinance(year) {
+    year = /^\d{4}$/.test(year || '') ? Number(year) : Number(today().slice(0, 4));
+    var r = L.financeReport(S.data.bookings, S.data.payments || [], year), t = r.total;
+    var curM = Number(today().slice(5, 7)) - 1, isCur = year === Number(today().slice(0, 4));
+    var rows = r.months.map(function (m, i) {
+      var empty = !m.events && !m.collected;
+      return '<tr class="' + (isCur && i === curM ? 'cur' : '') + (empty ? ' dim' : '') + '"><th>' + MONTHS_AR[i] + '</th><td>' + m.events + '</td><td>' + L.fmtMoney(m.value) + '</td><td>' + L.fmtMoney(m.collected) + '</td><td>' + L.fmtMoney(m.outstanding) + '</td></tr>';
+    }).join('');
+    shell('التقرير المالي',
+      '<div class="cal-nav"><a class="btn btn-sm" href="#finance/' + (year - 1) + '" aria-label="السنة السابقة">→</a><b>' + year + '</b><a class="btn btn-sm" href="#finance/' + (year + 1) + '" aria-label="السنة التالية">←</a></div>' +
+      '<div class="stats">' +
+      '<div class="card stat"><b>' + L.fmtMoney(t.value) + '</b><span>قيمة المناسبات (ر.ع)</span></div>' +
+      '<div class="card stat"><b>' + L.fmtMoney(t.collected) + '</b><span>المحصّل فعليًا (ر.ع)</span></div>' +
+      '<div class="card stat dark"><b>' + L.fmtMoney(t.outstanding) + '</b><span>المتبقي للتحصيل (ر.ع)</span></div>' +
+      '<div class="card stat"><b>' + t.events + '</b><span>مناسبة مؤكدة · متوسط ' + L.fmtMoney(Math.round(t.avg)) + ' ر.ع</span></div>' +
+      '</div>' +
+      '<div class="h2">حسب الشهر</div><div class="card fin-wrap"><table class="fin"><thead><tr><th>الشهر</th><th>مناسبات</th><th>القيمة</th><th>المحصّل</th><th>المتبقي</th></tr></thead><tbody>' + rows +
+      '</tbody><tfoot><tr><th>المجموع</th><td>' + t.events + '</td><td>' + L.fmtMoney(t.value) + '</td><td>' + L.fmtMoney(t.collected) + '</td><td>' + L.fmtMoney(t.outstanding) + '</td></tr></tfoot></table></div>' +
+      '<p class="muted small" style="margin:6px 0 0">القيمة والمتبقي حسب شهر المناسبة، والمحصّل حسب تاريخ استلام الدفعة.</p>' +
+      '<div class="h2">تفاصيل السنة</div><div class="card pad kv">' +
+      '<div><span>باقة الضيافة</span><b>' + t.hospitality + '</b></div><div><span>الباقة الشاملة</span><b>' + t.comprehensive + '</b></div>' +
+      '<div><span>طلبات وصلت هذه السنة</span><b>' + t.inquiries + '</b></div>' +
+      '<div><span>حجوزات ملغاة بعد الدفع</span><b>' + t.cancelled + (t.retained ? ' · ' + money(t.retained) + ' مدفوعة' : '') + '</b></div>' +
+      r.methods.map(function (m) { return '<div><span>' + esc(m.method) + '</span><b>' + money(m.amount) + '</b></div>'; }).join('') + '</div>' +
+      '<button class="btn btn-block" style="margin-top:14px" data-act="finCsv" data-id="' + year + '">تنزيل التقرير (Excel / CSV)</button>',
+      { back: '#home' });
+  }
+  function financeCsv(year) {
+    var r = L.financeReport(S.data.bookings, S.data.payments || [], year), t = r.total;
+    var lines = [['الشهر', 'عدد المناسبات', 'قيمة المناسبات', 'المحصّل', 'المتبقي', 'الضيافة', 'الشاملة']];
+    r.months.forEach(function (m, i) { lines.push([MONTHS_AR[i] + ' ' + year, m.events, m.value, m.collected, m.outstanding, m.hospitality, m.comprehensive]); });
+    lines.push(['المجموع', t.events, t.value, t.collected, t.outstanding, t.hospitality, t.comprehensive]);
+    lines.push([]); lines.push(['المناسبات المؤكدة ' + year]);
+    lines.push(['رقم الحجز', 'الاسم', 'التاريخ', 'الباقة', 'الضيوف', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', 'رقم الفاتورة']);
+    S.data.bookings.filter(function (b) { return String(b.date).slice(0, 4) === String(year) && L.BOOKED.indexOf(b.status) >= 0; })
+      .sort(function (a, b) { return a.date < b.date ? -1 : 1; })
+      .forEach(function (b) { lines.push([b.id, b.name, b.date, pkgName(b.package), b.guests, b.total, b.paid, b.balance, b.status, b.invoiceNo || '']); });
+    var csv = '\ufeff' + lines.map(function (l) { return l.map(function (v) { v = String(v == null ? '' : v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','); }).join('\r\n');
+    var url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), a = document.createElement('a');
+    a.href = url; a.download = 'تقرير-تبيان-' + year + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    toast('تم تنزيل التقرير');
   }
 
   /* ================= الدخول ================= */
@@ -238,7 +316,8 @@
       '<div class="card stat"><b>' + st.conversion + '%</b><span>نسبة التحويل</span></div>' +
       (isAdmin() ? '<div class="card stat dark"><b>' + L.fmtMoney(st.outstanding) + '</b><span>المتبقي للتحصيل (ر.ع)</span></div>'
         : '<div class="card stat dark"><b>' + d.week.length + '</b><span>مناسبات هذا الأسبوع</span></div>') +
-      '</div>';
+      '</div>' +
+      '<div class="shortcuts"><a class="card" href="#calendar">' + IC.cal + '<span>التقويم</span></a>' + (isAdmin() ? '<a class="card" href="#finance">' + IC.chart + '<span>التقرير المالي</span></a>' : '') + '</div>';
     var tasks =
       section('طلبات جديدة', d.newInquiries, 'quote', 'العرض') +
       section('متابعات اليوم', d.followUps, 'followup', 'متابعة') +
@@ -302,7 +381,8 @@
       ['المصدر', b.source], ['أُنشئ', stamp(b.created)], b.bookedOn ? ['تاريخ التأكيد', shortDate(b.bookedOn)] : null,
       b.nextFollowUp && L.OPEN.indexOf(b.status) >= 0 ? ['المتابعة القادمة', shortDate(b.nextFollowUp)] : null,
       b.lastContact ? ['آخر تواصل', stamp(b.lastContact)] : null, b.extras ? ['⭐ خدمات إضافية', '<b style="color:var(--gold-ink)">' + esc(b.extras) + '</b>', true] : null, b.notes ? ['ملاحظات', b.notes] : null,
-      b.consent ? ['الموافقة', b.consent] : null,
+      b.consent ? ['موافقة التواصل', b.consent] : null,
+      ['موافقة التسويق', b.marketing === 'نعم' ? 'موافق ✓' : b.marketing === 'لا' ? 'لا يرغب — لا تُرسل له تهاني أو عروض' : (b.consent ? 'موافق (موافقة قديمة شاملة)' : '—')],
       repeatCount(b) ? ['عميل سابق', '<span class="chip s-paid">' + repeatCount(b) + ' حجز سابق</span>', true] : null
     ].filter(Boolean).map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + (r[2] ? r[1] : esc(r[1])) + '</dd>'; }).join('');
 
@@ -449,6 +529,7 @@
       (b ? '' : '<div class="field"><label for="f_src">مصدر الطلب</label><select class="input" id="f_src">' + opts(['واتساب', 'اتصال', 'إنستغرام', 'توصية', 'أخرى'], 'واتساب') + '</select></div>') +
       (admin ? '<div class="grid2"><div class="field"><label for="f_custom">سعر خاص (اختياري)</label><input class="input" id="f_custom" inputmode="decimal" placeholder="تلقائي"></div>' +
         '<div class="field"><label for="f_travel">رسوم مواصلات (اختياري)</label><input class="input" id="f_travel" inputmode="decimal" placeholder="تلقائي"></div></div>' : '') +
+      '<div class="field"><label for="f_mk">موافقة العميل على العروض والتسويق</label><select class="input" id="f_mk">' + [['', 'غير محدد'], ['نعم', 'نعم، موافق'], ['لا', 'لا يرغب']].map(function (o) { return '<option value="' + o[0] + '"' + ((v.marketing || '') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
       '<div class="field"><label for="f_extras">خدمات إضافية يطلبها العميل</label><textarea class="input" id="f_extras" maxlength="600" placeholder="اكتبها بالتفصيل">' + esc(v.extras || '') + '</textarea></div>' +
       '<div class="field"><label for="f_notes">ملاحظات</label><textarea class="input" id="f_notes" maxlength="500">' + esc(v.notes || '') + '</textarea></div>' +
       (admin ? '<div class="price-live" id="livePrice"></div>' : '') +
@@ -485,7 +566,7 @@
       var p = {
         package: c.package, name: $('f_name').value.trim(), phone: digits($('f_phone').value), occasion: $('f_occ').value,
         guests: c.guests, date: $('f_date').value, time: $('f_time').value, location: $('f_loc').value.trim(),
-        dinner: c.package === 'comprehensive' ? $('f_din').value : '', notes: $('f_notes').value, extras: $('f_extras').value
+        dinner: c.package === 'comprehensive' ? $('f_din').value : '', notes: $('f_notes').value, extras: $('f_extras').value, marketing: $('f_mk').value
       };
       if (c.area !== '__keep') p.area = c.area;
       if (!b) p.source = $('f_src').value;
@@ -509,10 +590,11 @@
     occ = occ || store('tibian_greet_occ') || (hol[0] && hol[0].name) || '';
     var sent = (S.data.greetSent || {})[occ] || [];
     var people = L.greetingList(S.data.bookings, sent);
+    var optedOut = {}; S.data.bookings.forEach(function (b) { if (!L.marketingAllowed(b)) optedOut[L.normPhone(b.phone)] = 1; }); optedOut = Object.keys(optedOut).length;
     var done = people.filter(function (p) { return p.sent; }).length;
     var body = '<div class="card pad"><div class="field"><label for="gocc">المناسبة</label><input class="input" id="gocc" list="hol" value="' + esc(occ) + '" placeholder="مثال: العيد الوطني المجيد">' +
       '<datalist id="hol">' + hol.map(function (h) { return '<option value="' + esc(h.name) + '">' + esc(shortDate(h.date)) + '</option>'; }).join('') + '</datalist>' +
-      '<div class="hint">كل عميل يظهر مرة واحدة فقط، ومن وصلته التهنئة يُعلَّم ✓ حتى لا تتكرر.</div></div>' +
+      '<div class="hint">كل عميل يظهر مرة واحدة فقط، ومن وصلته التهنئة يُعلَّم ✓ حتى لا تتكرر.' + (optedOut ? ' لا يظهر ' + optedOut + ' عميل لم يوافقوا على الرسائل التسويقية.' : '') + '</div></div>' +
       '<div class="field"><label for="gtpl">نموذج الرسالة</label><select class="input" id="gtpl">' + (S.data.greetingTemplates || []).map(function (t, i) { return '<option value="' + i + '"' + (String(i) === String(store('tibian_greet_tpl') || 0) ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('') + '</select>' +
       '<div class="hint"><a href="#settings/greetings">إضافة نماذج أو تعديلها</a></div><pre id="gprev" class="small" style="white-space:pre-wrap;background:var(--sand);border-radius:10px;padding:8px 10px;margin:8px 0 0;font-family:inherit"></pre></div>' +
       (occ ? '<p class="small" style="margin:0">أُرسلت التهنئة: <b>' + done + '</b> من أصل <b>' + people.length + '</b></p>' : '') + '</div>' +
@@ -795,7 +877,8 @@
       f('min_guests', 'أقل عدد ضيوف للأسعار', 'num') + '</div>' + f('max_guests', 'أكبر عدد ضيوف للأسعار', 'num') +
       f('comprehensive_areas', 'مناطق الباقة الشاملة (افصل بفاصلة)', '', 'الباقة الشاملة لا تظهر إلا لهذه المناطق. الافتراضي: مسقط') + '</div>' +
       '<div class="h2">التواصل</div><div class="card pad">' + f('whatsapp', 'رقم واتساب العمل', 'ltr') + f('instagram', 'رابط إنستغرام', 'ltr') + f('summary_emails', 'إيميلات الملخص اليومي (افصل بفاصلة)', 'ltr') + '</div>' +
-      '<div class="h2">نص الموافقة في صفحة العميل</div><div class="card pad">' + f('consent_text_ar', 'بالعربية', 'area') + f('consent_text_en', 'بالإنجليزية', 'area') + '</div>' +
+      '<div class="h2">نص الموافقة في صفحة العميل</div><div class="card pad">' + f('consent_text_ar', 'موافقة التواصل (إلزامية) — بالعربية', 'area') + f('consent_text_en', 'موافقة التواصل — بالإنجليزية', 'area') +
+        f('marketing_text_ar', 'موافقة التسويق (اختيارية) — بالعربية', 'area') + f('marketing_text_en', 'موافقة التسويق — بالإنجليزية', 'area') + '</div>' +
       '<div class="h2">شروط الحجز</div><div class="card pad">' + f('terms_ar', 'بالعربية (كل سطر شرط)', 'area') + f('terms_en', 'بالإنجليزية', 'area') + '</div>' +
       '<div id="setMsg"></div><button class="btn btn-dark btn-block" style="margin-top:12px" data-act="saveSettings">حفظ</button>');
   }
@@ -901,6 +984,7 @@
       case 'pay': sheetPayment(id); break;
       case 'invoice': makeInvoice(id, el); break;
       case 'pdf': invoicePdf(id, el); break;
+      case 'finCsv': financeCsv(Number(id)); break;
       case 'pdfShare': sharePdf(); break;
       case 'pdfSave': savePdf(); break;
       case 'autoInstall': loadAutomation('install'); break;
