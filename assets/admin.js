@@ -99,7 +99,11 @@
   function openWa(phone, text) {
     var links = L.waLinks(phone, text);
     if (mobile) { location.href = links.app; }
-    else { var w = window.open(links.api, '_blank', 'noopener'); if (!w) location.href = links.api; }
+    else {
+      // ملاحظة: window.open مع 'noopener' يُرجع null دائمًا، فكان يفتح الصفحة مرتين (تبويب جديد + نفس الصفحة)
+      var w = window.open(links.api, '_blank');
+      if (w) { try { w.opener = null; } catch (e) {} } else location.href = links.api;
+    }
     toast('تم تجهيز الرسالة في واتساب', 'نسخ', function () { copy(text); });
   }
   function messageFor(b, key, extra) {
