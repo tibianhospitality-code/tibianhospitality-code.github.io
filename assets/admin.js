@@ -326,7 +326,7 @@
       if (!booked) { wa('quote', 'إرسال عرض السعر', 'btn-wa wide'); wa('followup', 'متابعة'); }
       if (admin && !booked) A.push('<button class="btn btn-dark" data-act="confirm" data-id="' + esc(b.id) + '">تأكيد واستلام العربون</button>');
       if (admin && booked && Number(b.balance) > 0) A.push('<button class="btn btn-dark" data-act="pay" data-id="' + esc(b.id) + '">تسجيل دفعة</button>');
-      if (admin && b.invoiceUrl) wa('send_invoice', 'إرسال الفاتورة');
+      if (admin && b.invoiceUrl) { A.push('<button class="btn btn-wa" data-act="pdf" data-id="' + esc(b.id) + '">' + IC.wa + 'إرسال الفاتورة كملف PDF</button>'); wa('send_invoice', 'إرسال رابط الفاتورة'); }
       if (admin && (booked || Number(b.paid) > 0)) A.push('<button class="btn" data-act="invoice" data-id="' + esc(b.id) + '">' + (b.invoiceUrl ? 'تحديث الفاتورة' : 'إصدار الفاتورة') + '</button>');
       if (admin && booked) wa('booking_confirmed', 'رسالة التأكيد');
       if (admin && booked && Number(b.balance) > 0) wa('balance_reminder', 'تذكير بالمتبقي');
@@ -900,6 +900,9 @@
       case 'confirm': sheetConfirm(id); break;
       case 'pay': sheetPayment(id); break;
       case 'invoice': makeInvoice(id, el); break;
+      case 'pdf': invoicePdf(id, el); break;
+      case 'pdfShare': sharePdf(); break;
+      case 'pdfSave': savePdf(); break;
       case 'autoInstall': loadAutomation('install'); break;
       case 'asanaSave': var tok = $('asTok').value.trim(), pr = $('asProj').value.trim(); if (!pr || (!tok && !S.data.asanaConnected)) { asanaForm('<div class="msg err">أدخل الرمز ورقم المشروع</div>'); break; } loadAsana('save', { token: tok, project: pr }); break;
       case 'asanaSync': loadAsana('syncAll'); break;
@@ -927,10 +930,49 @@
       var b = r.booking;
       openSheet('<h3>الفاتورة جاهزة ✓</h3><div class="msg ok">' + esc(b.invoiceNo) + ' · المدفوع ' + money(b.paid) + ' · المتبقي ' + money(b.balance) + '</div>' +
         '<a class="btn btn-block" href="' + esc(b.invoiceUrl) + '" target="_blank" rel="noopener">فتح الفاتورة (PDF)</a>' +
-        '<button class="btn btn-wa btn-block" style="margin-top:8px" data-act="wa" data-id="' + esc(id) + '" data-key="send_invoice">' + IC.wa + 'إرسال الفاتورة للعميل</button>' +
+        '<button class="btn btn-wa btn-block" style="margin-top:8px" data-act="pdf" data-id="' + esc(id) + '">' + IC.wa + 'إرسال الفاتورة كملف PDF</button>' +
+        '<button class="btn btn-block" style="margin-top:8px" data-act="wa" data-id="' + esc(id) + '" data-key="send_invoice">إرسال رابط الفاتورة</button>' +
         '<button class="btn btn-block" style="margin-top:8px" data-act="close">إغلاق</button>');
       render();
     }).catch(function (e) { btn.disabled = false; btn.textContent = 'إصدار الفاتورة'; toast(errText(e)); });
+  }
+  /* ===== إرسال الفاتورة كملف PDF =====
+     روابط واتساب لا تحمل ملفات، لذلك نجلب الملف ثم نفتح قائمة المشاركة في الجوال
+     (تختار واتساب ثم محادثة العميل). على الكمبيوتر: تنزيل الملف ثم سحبه إلى المحادثة. */
+  function invoicePdf(id, btn) {
+    var label = btn.innerHTML; btn.disabled = true; btn.textContent = 'جارٍ تجهيز الملف…';
+    api('invoiceFile', { id: id }).then(function (r) {
+      btn.disabled = false; btn.innerHTML = label;
+      var bin = atob(r.b64), bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      var file = new File([bytes], r.name, { type: r.mime || 'application/pdf' });
+      S.pdf = { id: id, file: file };
+      var canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+      var b = S.byId[id] || {};
+      openSheet('<h3>الفاتورة جاهزة للإرسال</h3><div class="msg ok">' + esc(r.name) + ' · ' + Math.max(1, Math.round(file.size / 1024)) + ' KB</div>' +
+        (canShare
+          ? '<button class="btn btn-wa btn-block" data-act="pdfShare">' + IC.wa + 'مشاركة الملف</button><p class="muted" style="margin:8px 0 0">اختر «واتساب» ثم محادثة ' + esc(b.name || 'العميل') + '.</p>'
+          : '<p class="muted" style="margin:0 0 8px">هذا الجهاز لا يدعم المشاركة المباشرة: نزّل الملف ثم اسحبه إلى محادثة العميل في واتساب.</p>' +
+            '<button class="btn btn-wa btn-block" data-act="pdfSave">تنزيل الملف</button>' +
+            '<button class="btn btn-block" style="margin-top:8px" data-act="wa" data-id="' + esc(id) + '" data-key="send_invoice">' + IC.wa + 'فتح محادثة العميل</button>') +
+        (canShare ? '<button class="btn btn-block" style="margin-top:8px" data-act="pdfSave">تنزيل الملف فقط</button>' : '') +
+        '<button class="btn btn-block" style="margin-top:8px" data-act="close">إغلاق</button>');
+    }).catch(function (e) { btn.disabled = false; btn.innerHTML = label; toast(errText(e)); });
+  }
+  function sharePdf() {
+    var p = S.pdf; if (!p) return;
+    navigator.share({ files: [p.file], title: p.file.name }).then(function () {
+      closeSheet();
+      api('contacted', { id: p.id, key: 'send_invoice' }).then(function (b) { putBooking(b); render(); }).catch(function () {});
+      toast('تم إرسال الفاتورة');
+    }).catch(function (e) { if (e && e.name !== 'AbortError') { toast('تعذرت المشاركة، نزّل الملف بدلًا من ذلك'); } });
+  }
+  function savePdf() {
+    var p = S.pdf; if (!p) return;
+    var url = URL.createObjectURL(p.file), a = document.createElement('a');
+    a.href = url; a.download = p.file.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    toast('تم تنزيل الفاتورة');
   }
   function setStatus(id, status) {
     api('status', { id: id, status: status }).then(function (b) { putBooking(b); render(); toast('تم تحديث الحالة: ' + status); }).catch(function (e) { toast(errText(e)); });
