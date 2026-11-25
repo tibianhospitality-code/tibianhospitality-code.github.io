@@ -330,10 +330,22 @@ var TibianLogic = (function () {
       'بيانات_البنك': bankText(s),
       'محل_التجهيز': s.groom_shop_name || '(اسم المحل)', 'موقع_المحل': s.groom_shop_map || '',
       'محلات_التجهيز': (ctx && ctx.shops || []).filter(function (x) { return x.active !== false; }).map(function (x) { return '🏪 ' + x.name + (x.map ? '\n📍 ' + x.map : ''); }).join('\n\n'),
-      'إنستغرام': s.instagram || ''
+      'إنستغرام': s.instagram || '',
+      'رابط_التقييم': s.review_url || ''
     };
     if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) v[k] = extra[k];
     return v;
+  }
+
+  /**
+   * نص الرسالة النهائي. رسالة الشكر: إن وُجد رابط تقييم Google ولم يكن القالب يحتوي {رابط_التقييم}
+   * نضيف سطر طلب التقييم في آخرها تلقائيًا.
+   */
+  function messageText(key, tpl, vars) {
+    var text = fill(tpl, vars);
+    var link = vars && vars['رابط_التقييم'];
+    if (key === 'thank_you' && link && String(tpl).indexOf('{رابط_التقييم}') < 0) text += '\n\n⭐ يسعدنا تقييمكم لنا على Google:\n' + link;
+    return text;
   }
 
   /** مفتاح القالب الفعلي: «quote» يصبح عرض الباقة المناسبة */
@@ -510,7 +522,7 @@ var TibianLogic = (function () {
     MONTHS: MONTHS, formatInvoiceNo: formatInvoiceNo, invoiceCounterKey: invoiceCounterKey, parseInvoiceSeq: parseInvoiceSeq,
     bankText: bankText, bookingVars: bookingVars, templateKey: templateKey, MONEY_MESSAGES: MONEY_MESSAGES,
     afterMessage: afterMessage, sentToday: sentToday, dashboard: dashboard, monthStats: monthStats, greetingList: greetingList,
-    marketingAllowed: marketingAllowed, calendarMonth: calendarMonth, addMonths: addMonths, financeReport: financeReport
+    marketingAllowed: marketingAllowed, messageText: messageText, calendarMonth: calendarMonth, addMonths: addMonths, financeReport: financeReport
   };
 })();
 

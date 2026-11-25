@@ -119,7 +119,7 @@
     var k = L.templateKey(key, b);
     var tpl = S.data.templates[k];
     if (!tpl) return null;
-    return { key: k, text: L.fill(tpl, L.bookingVars(b, { s: S.data.settings, tiers: S.data.tiers, shops: S.data.shops }, extra)) };
+    return { key: k, text: L.messageText(k, tpl, L.bookingVars(b, { s: S.data.settings, tiers: S.data.tiers, shops: S.data.shops }, extra)) };
   }
   /** متغيرات محل التجهيز المختار (أو كل المحلات) */
   function shopVars(idx) {
@@ -876,7 +876,7 @@
       f('refund_window_days', 'مدة استرداد العربون (أيام)', 'num') + f('max_events_per_day', 'أقصى مناسبات في اليوم', 'num') + f('followup_days', 'المتابعة بعد العرض (أيام)', 'num') +
       f('min_guests', 'أقل عدد ضيوف للأسعار', 'num') + '</div>' + f('max_guests', 'أكبر عدد ضيوف للأسعار', 'num') +
       f('comprehensive_areas', 'مناطق الباقة الشاملة (افصل بفاصلة)', '', 'الباقة الشاملة لا تظهر إلا لهذه المناطق. الافتراضي: مسقط') + '</div>' +
-      '<div class="h2">التواصل</div><div class="card pad">' + f('whatsapp', 'رقم واتساب العمل', 'ltr') + f('instagram', 'رابط إنستغرام', 'ltr') + f('summary_emails', 'إيميلات الملخص اليومي (افصل بفاصلة)', 'ltr') + '</div>' +
+      '<div class="h2">التواصل</div><div class="card pad">' + f('whatsapp', 'رقم واتساب العمل', 'ltr') + f('instagram', 'رابط إنستغرام', 'ltr') + f('review_url', 'رابط تقييم Google', 'ltr', 'يُضاف تلقائيًا في آخر رسالة الشكر بعد المناسبة. من Google Maps: افتح نشاطك ← «طلب مراجعات» أو «مشاركة» وانسخ الرابط.') +f('summary_emails', 'إيميلات الملخص اليومي (افصل بفاصلة)', 'ltr') + '</div>' +
       '<div class="h2">نص الموافقة في صفحة العميل</div><div class="card pad">' + f('consent_text_ar', 'موافقة التواصل (إلزامية) — بالعربية', 'area') + f('consent_text_en', 'موافقة التواصل — بالإنجليزية', 'area') +
         f('marketing_text_ar', 'موافقة التسويق (اختيارية) — بالعربية', 'area') + f('marketing_text_en', 'موافقة التسويق — بالإنجليزية', 'area') + '</div>' +
       '<div class="h2">شروط الحجز</div><div class="card pad">' + f('terms_ar', 'بالعربية (كل سطر شرط)', 'area') + f('terms_en', 'بالإنجليزية', 'area') + '</div>' +
@@ -930,7 +930,7 @@
   }
   function loadAutomation(action) {
     var box = $('autoBox'); if (!box) return;
-    if (action !== 'status') box.innerHTML = '<p class="muted small" style="margin:0">' + (action === 'test' ? 'جارٍ إرسال الملخص…' : 'جارٍ التفعيل…') + '</p>';
+    if (action !== 'status') box.innerHTML = '<p class="muted small" style="margin:0">' + (action === 'test' ? 'جارٍ إرسال الملخص…' : action === 'backup' ? 'جارٍ حفظ نسخة من جدول البيانات…' : 'جارٍ التفعيل…') + '</p>';
     api('automation', { action: action }).then(function (st) {
       if (!$('autoBox')) return;
       $('autoBox').innerHTML =
@@ -941,7 +941,12 @@
         '<p class="small muted" style="margin:0 0 10px">الإرسال: ' + (st.mode === 'cloud_api' ? 'تلقائي عبر WhatsApp Cloud API' : 'بضغطة منك (مجاني)') + '</p>' +
         (st.test ? '<div class="msg ok">' + (st.test.to ? 'أُرسل ملخص اليوم إلى ' + esc(st.test.to) + ' — عدد المهام: ' + st.test.count : 'لم يُرسل: لا يوجد إيميل') + '</div>' : '') +
         '<div class="quick">' + (st.installed ? '' : '<button class="btn btn-dark" data-act="autoInstall">تفعيل الملخص اليومي</button>') +
-        '<button class="btn" data-act="autoTest">إرسال ملخص اليوم الآن</button></div>';
+        '<button class="btn" data-act="autoTest">إرسال ملخص اليوم الآن</button></div>' +
+        '<div class="switch" style="margin:16px 0 6px;padding-top:12px;border-top:1px solid var(--line)"><span><b>النسخ الاحتياطي الأسبوعي</b><br><span class="small muted">' + (st.lastBackup ? 'آخر نسخة: ' + esc(stamp(st.lastBackup)) : 'لا توجد نسخة بعد') + '</span></span>' +
+        '<span class="chip ' + (st.installed ? 's-confirmed' : 's-cancelled') + '">' + (st.installed ? 'تلقائي' : 'يحتاج تفعيل الملخص') + '</span></div>' +
+        '<p class="small" style="margin:0 0 10px">نسخة كاملة من جدول البيانات كل أسبوع في مجلد «نسخ احتياطية» على Drive، ونحتفظ بآخر 8 نسخ (شهران). يعمل مع الملخص اليومي.</p>' +
+        (st.backup ? '<div class="msg ok">تم حفظ نسخة: ' + esc(st.backup.name) + '</div>' : '') +
+        '<div class="quick"><button class="btn" data-act="autoBackup">نسخة احتياطية الآن</button>' + (st.backupFolder ? '<a class="btn" href="' + esc(st.backupFolder) + '" target="_blank" rel="noopener">فتح مجلد النسخ</a>' : '') + '</div>';
     }).catch(function (e) { if ($('autoBox')) $('autoBox').innerHTML = '<div class="msg err">' + esc(errText(e)) + '</div>'; });
   }
   function changePin(role, pin, pin2) {
@@ -993,6 +998,7 @@
       case 'asanaEdit': asanaForm(); break;
       case 'asanaOff': if (confirm('فصل Asana؟ لن تُنشأ مهام جديدة حتى تعيد الربط.')) loadAsana('disconnect'); break;
       case 'autoTest': loadAutomation('test'); break;
+      case 'autoBackup': loadAutomation('backup'); break;
       case 'close': closeSheet(); break;
       case 'refresh': load(true); break;
       case 'logout': logout(); break;
