@@ -182,7 +182,6 @@
   function renderOffers() {
     var all = (state.cfg.offers || []);
     // توافق مع الإعدادات القديمة (عرض واحد)
-    if (!all.length && state.cfg.offerActive && state.cfg.offer_ar) all = [{ ar: state.cfg.offer_ar, en: state.cfg.offer_en, package: 'الشاملة' }];
     $('offers').innerHTML = all.slice(0, 3).map(offerHtml).join('');
     $('offers').classList.toggle('hidden', !all.length);
     var h = all.filter(function (o) { return o.package === 'الكل' || o.package === 'الضيافة'; });

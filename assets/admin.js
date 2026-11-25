@@ -251,7 +251,7 @@
       { back: '#home' });
   }
   /* ================= المصروفات (للمدير) ================= */
-  var EXP_CATS = ['الفريق', 'الطعام والقهوة', 'المواصلات', 'المستلزمات', 'أخرى'];
+  var EXP_CATS = ['الفريق', 'الطعام والقهوة', 'المواصلات', 'المستلزمات', 'الإعلانات', 'الاشتراكات', 'تكلفة المناسبة', 'أخرى'];
   function expensesHtml(b) {
     var pr = L.bookingProfit(b, S.data.expenses || []);
     if (b.status === ST.CANCELLED && !pr.items.length) return '';

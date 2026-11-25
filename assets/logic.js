@@ -315,6 +315,7 @@ var TibianLogic = (function () {
     var t = findTier(ctx && ctx.tiers, b.guests) || {};
     var dinner = b.package === 'comprehensive' ? (b.dinner || '') : '';
     var travel = Number(b.travelFee) || 0;
+    var shop0 = (ctx && ctx.shops || []).filter(function (x) { return x.active !== false; })[0] || {};
     var v = {
       'رقم_الحجز': b.id, 'الاسم': b.name, 'المناسبة': b.occasion,
       'الباقة': PKG[b.package] ? PKG[b.package].ar : (b.package || ''),
@@ -329,7 +330,7 @@ var TibianLogic = (function () {
       'موعد_المتبقي': b.date ? arDate(balanceDueDate(b.date, s.balance_days_before)) : '',
       'رقم_الفاتورة': b.invoiceNo || '', 'رابط_الفاتورة': b.invoiceUrl || '(نرسلها لكم قريبًا)',
       'بيانات_البنك': bankText(s),
-      'محل_التجهيز': s.groom_shop_name || '(اسم المحل)', 'موقع_المحل': s.groom_shop_map || '',
+      'محل_التجهيز': shop0.name || '(اسم المحل)', 'موقع_المحل': shop0.map || '',
       'محلات_التجهيز': (ctx && ctx.shops || []).filter(function (x) { return x.active !== false; }).map(function (x) { return '🏪 ' + x.name + (x.map ? '\n📍 ' + x.map : ''); }).join('\n\n'),
       'إنستغرام': s.instagram || '',
       'رابط_التقييم': s.review_url || '',
