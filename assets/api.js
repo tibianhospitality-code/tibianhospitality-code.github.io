@@ -52,15 +52,22 @@
         if (action === 'config') {
           var cfg = JSON.parse(JSON.stringify(C.fallback));
           cfg.travel = [{ name: 'مسقط', fee: 0, appliesTo: 'الكل' }, { name: 'بركاء', fee: 20, appliesTo: 'باقة الضيافة' }, { name: 'نزوى', fee: 35, appliesTo: 'باقة الضيافة' }];
+          cfg.hasCodes = true;
+          cfg.reviews = params.get('reviews') === '0' ? [] : [{ name: 'أم سالم', occasion: 'ملكة', when: 'أكتوبر 2026', stars: 5, ar: 'نص تجريبي للعرض فقط', en: 'Sample text for preview only' }, { name: 'م. ع.', occasion: 'افتتاح مشروع', when: 'سبتمبر 2026', stars: 4, ar: 'نص تجريبي ثانٍ للعرض فقط', en: '' }];
+          cfg.review_url = 'https://example.com/reviews';
           cfg.fullDates = [L.addDays(new Date().toISOString().slice(0, 10), 10)];
           return resolve(cfg);
         }
         if (action === 'availability') return resolve({ date: q.date, used: 1, available: true });
+        if (action === 'code') { var cc = L.normCode(q.code); return resolve(cc === 'HESSA5' ? { ok: true, code: cc, type: 'نسبة %', value: 5, package: 'الكل' } : cc === 'WED20' ? (q.pkg === 'comprehensive' ? { ok: true, code: cc, type: 'مبلغ ثابت', value: 20, package: 'الشاملة' } : { ok: false, reason: 'package' }) : { ok: false, reason: 'invalid' }); }
+        if (action === 'callback') { if (q.data.consent !== true) { var e5 = new Error('consent'); e5.code = 'consent'; return reject(e5); } return resolve({ id: 'T' + (mockSeq++) }); }
         if (action === 'inquiry') {
           var f = q.data, cfg2 = JSON.parse(JSON.stringify(C.fallback));
           cfg2.travel = [{ name: 'مسقط', fee: 0, appliesTo: 'الكل' }, { name: 'بركاء', fee: 20, appliesTo: 'باقة الضيافة' }, { name: 'نزوى', fee: 35, appliesTo: 'باقة الضيافة' }];
           if (!L.validPhone(f.phone)) { var e2 = new Error('invalid phone'); e2.code = 'phone'; return reject(e2); }
           var qq = L.quote(cfg2, f.package, f.guests, f.area);
+          if (f.code === 'HESSA5' && !qq.special) qq = L.applyDiscount(qq, L.round3(qq.price * 0.05), 50);
+          else if (f.code) { var e6 = new Error('code'); e6.code = 'code'; return reject(e6); }
           var id = 'T' + (mockSeq++);
           if (f.consent !== true) { var e3 = new Error('consent required'); e3.code = 'consent'; return reject(e3); }
           var text = L.requestMessage(qq.special ? cfg2.templates.special_request : cfg2.templates.customer_request, f, qq, id);

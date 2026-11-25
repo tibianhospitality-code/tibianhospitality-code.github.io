@@ -6,6 +6,9 @@
 <title>تبيان للضيافة | ضيافة الأعراس والمناسبات في عُمان</title>
 <meta name="description" content="تبيان للضيافة لتنظيم المناسبات في مسقط وكل عُمان: فريق ضيافة واستقبال، عشاء، حلوى عُمانية وتصوير. احسب سعر مناسبتك فورًا واحجز عبر واتساب.">
 <meta name="theme-color" content="#2F2F2F">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="keywords" content="ضيافة أعراس مسقط, ضيافة ملكة, مضيفين مناسبات عمان, ضيافة عزاء, ضيافة حفلات شركات, تبيان للضيافة, wedding hospitality Oman">
+
 <link rel="canonical" href="https://tibianhospitality-code.github.io/">
 <link rel="alternate" hreflang="ar" href="https://tibianhospitality-code.github.io/">
 <link rel="alternate" hreflang="en" href="https://tibianhospitality-code.github.io/?lang=en">
@@ -31,12 +34,13 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"></noscript>
-<link rel="stylesheet" href="assets/site.css?v=8">
+<link rel="stylesheet" href="assets/site.css?v=202611251406">
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
+  "@id": "https://tibianhospitality-code.github.io/#business",
   "name": "تبيان للضيافة",
   "alternateName": "Tibian Hospitality",
   "description": "ضيافة الأعراس والمناسبات في عُمان — لتنظيم المناسبات",
@@ -47,7 +51,18 @@
   "address": { "@type": "PostalAddress", "addressLocality": "السيب", "addressRegion": "مسقط", "addressCountry": "OM" },
   "areaServed": { "@type": "Country", "name": "Oman" },
   "sameAs": ["https://www.instagram.com/tibianhospitality.om"],
-  "priceRange": "OMR 140 – 2240"
+  "priceRange": "OMR 140 – 2240",
+  "logo": "https://tibianhospitality-code.github.io/assets/img/apple-touch-icon.png",
+  "currenciesAccepted": "OMR",
+  "knowsLanguage": ["ar", "en"],
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "باقات الضيافة",
+    "itemListElement": [
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "باقة الضيافة", "description": "فريق ضيافة واستقبال للأعراس والمناسبات والعزاء وحفلات الشركات في كل عُمان" } },
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "الباقة الشاملة", "description": "ضيافة عقد القران (الملكة) في مسقط: ضيافة وعشاء وحلوى عُمانية وتصوير وتجهيز المعرس" } }
+    ]
+  }
 }
 </script>
 </head>
@@ -215,6 +230,14 @@
         </fieldset>
 
         <div class="card price" id="priceCard" aria-live="polite"></div>
+        <div class="code hidden" id="codeBox">
+          <button type="button" class="link" id="codeToggle" data-t="codeQ">عندك كود خصم؟</button>
+          <div class="code__row hidden" id="codeRow">
+            <input id="codeIn" class="input" dir="ltr" autocomplete="off" autocapitalize="characters" maxlength="30" aria-label="كود الخصم" data-tp="codePh" placeholder="اكتب الكود">
+            <button type="button" class="btn btn--line" id="codeApply" data-t="codeApply">تطبيق</button>
+          </div>
+          <p class="code__msg" id="codeMsg" aria-live="polite"></p>
+        </div>
 
         <p class="err hidden" id="err" role="alert"></p>
         <button type="submit" class="btn btn--wa btn--block" id="sendBtn">
@@ -247,6 +270,33 @@
         </details>
         <button type="button" class="link" id="editBtn" data-t="edit">تعديل الطلب</button>
       </div>
+
+      <!-- اتصلوا بي -->
+      <div class="card callback" id="callback">
+        <h3 class="callback__h" data-t="cbH">تفضّل أن نتصل بك؟</h3>
+        <p class="callback__p" data-t="cbP">اترك اسمك ورقمك، ونتصل بك لنساعدك في اختيار الباقة المناسبة.</p>
+        <button type="button" class="btn btn--line btn--block" id="cbOpen" data-t="cbOpen">اطلب اتصالًا</button>
+        <div id="cbForm" class="hidden">
+          <div class="field"><label class="field__label" for="cbName" data-t="name">الاسم</label><input id="cbName" class="input" autocomplete="name" maxlength="80"></div>
+          <div class="field"><label class="field__label" for="cbPhone" data-t="phone">رقم الهاتف</label><input id="cbPhone" class="input" type="tel" inputmode="tel" dir="ltr" autocomplete="tel" maxlength="20" placeholder="9xxx xxxx"></div>
+          <div class="field"><label class="field__label" for="cbWhen" data-t="cbWhen">الوقت المناسب للاتصال</label>
+            <select id="cbWhen" class="input"><option value="أي وقت" data-t="cbAny">أي وقت</option><option value="صباحًا" data-t="cbMorning">صباحًا</option><option value="بعد الظهر" data-t="cbNoon">بعد الظهر</option><option value="مساءً" data-t="cbEvening">مساءً</option></select></div>
+          <label class="consent__row cb__consent hidden" for="cbConsent" id="cbConsentRow"><input type="checkbox" id="cbConsent"><span id="cbConsentText"></span></label>
+          <p class="err hidden" id="cbErr" role="alert"></p>
+          <button type="button" class="btn btn--gold btn--block" id="cbSend" data-t="cbSend">اطلب الاتصال</button>
+        </div>
+        <p class="callback__done hidden" id="cbDone" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- آراء العملاء -->
+  <section class="section" id="reviews" aria-labelledby="revTitle" hidden>
+    <div class="wrap">
+      <h2 class="section__title" id="revTitle" data-t="revTitle">آراء عملائنا</h2>
+      <p class="section__sub" data-t="revSub">كلمات نعتز بها من أصحاب المناسبات</p>
+      <div class="reviews" id="reviewsGrid"></div>
+      <p class="center hidden" id="reviewsMoreP"><a class="btn btn--line" id="reviewsMore" href="#" target="_blank" rel="noopener" data-t="revMore">كل التقييمات على Google</a></p>
     </div>
   </section>
 
@@ -304,9 +354,9 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="assets/config.js?v=8"></script>
-<script src="assets/logic.js?v=8"></script>
-<script src="assets/api.js?v=8"></script>
-<script src="assets/customer.js?v=8"></script>
+<script src="assets/config.js?v=202611251406"></script>
+<script src="assets/logic.js?v=202611251406"></script>
+<script src="assets/api.js?v=202611251406"></script>
+<script src="assets/customer.js?v=202611251406"></script>
 </body>
 </html>

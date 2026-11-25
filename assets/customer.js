@@ -44,6 +44,7 @@
       datePast: 'اختر تاريخًا قادمًا.',
       fill: 'يرجى إكمال: ', fName: 'الاسم', fPhone: 'رقم واتساب صحيح', fDate: 'تاريخ المناسبة', fGuests: 'عدد الضيوف',
       fOcc: 'نوع المناسبة', fTime: 'وقت المناسبة',
+      netErr: 'تعذر الإرسال. تأكد من الإنترنت وحاول مرة أخرى، أو راسلنا على واتساب.',
       badPhone: 'رقم الواتساب غير صحيح. اكتب رقمك العُماني المكوّن من 8 أرقام.',
       tooMany: 'أرسلت عدة طلبات خلال وقت قصير. تواصل معنا مباشرة على واتساب.',
       doneT: 'تم حفظ طلبك', ref: 'رقم طلبك: ',
@@ -52,6 +53,9 @@
       openWa: 'فتح واتساب', altH: 'إذا لم يفتح واتساب:', altLink: 'رابط بديل', waWeb: 'واتساب ويب', waDesk: 'تطبيق الكمبيوتر',
       copy: 'نسخ الرسالة', copied: 'تم نسخ الرسالة. الصقها في واتساب وأرسلها لنا.', manual: 'أو أرسل الرسالة يدويًا إلى:',
       preview: 'عرض نص الرسالة', edit: 'تعديل الطلب',
+      codeQ: 'عندك كود خصم؟', codePh: 'اكتب الكود', codeApply: 'تطبيق', codeOk: 'تم تطبيق الكود', codeBad: 'الكود غير صحيح أو انتهت صلاحيته', codePkg: 'هذا الكود لا ينطبق على هذه الباقة', codeUsed: 'هذا الكود استُخدم بالحد الأقصى', codeRemove: 'إزالة', discount: 'الخصم',
+      cbH: 'تفضّل أن نتصل بك؟', cbP: 'اترك اسمك ورقمك، ونتصل بك لنساعدك في اختيار الباقة المناسبة.', cbOpen: 'اطلب اتصالًا', cbWhen: 'الوقت المناسب للاتصال', cbAny: 'أي وقت', cbMorning: 'صباحًا', cbNoon: 'بعد الظهر', cbEvening: 'مساءً', cbSend: 'اطلب الاتصال', cbSending: 'جارٍ الإرسال…', cbDone: 'وصلنا طلبك ✓ سنتصل بك قريبًا إن شاء الله.', cbNeedName: 'اكتب اسمك', cbConsentErr: 'ضع علامة الموافقة على التواصل',
+      revTitle: 'آراء عملائنا', revSub: 'كلمات نعتز بها من أصحاب المناسبات', revMore: 'كل التقييمات على Google',
       galTitle: 'من أعمالنا', galSub: 'لقطات من مناسبات تشرفنا بخدمتها', soon: 'صورة قريبًا', igMore: 'المزيد على إنستغرام',
       g1: 'استقبال المعازيم', g2: 'تجهيز المجلس', g3: 'القهوة والحلوى', g4: 'العشاء', g5: 'التصوير', g6: 'تجهيز المعرس',
       faqTitle: 'أسئلة شائعة', termsT: 'شروط الحجز',
@@ -102,6 +106,7 @@
       datePast: 'Please choose an upcoming date.',
       fill: 'Please complete: ', fName: 'name', fPhone: 'a valid WhatsApp number', fDate: 'event date', fGuests: 'number of guests',
       fOcc: 'occasion', fTime: 'event time',
+      netErr: 'Could not send. Check your connection and try again, or message us on WhatsApp.',
       badPhone: 'Invalid WhatsApp number. Enter your 8-digit Omani number.',
       tooMany: 'Several requests were sent in a short time. Please contact us directly on WhatsApp.',
       doneT: 'Your request is saved', ref: 'Request no.: ',
@@ -110,6 +115,9 @@
       openWa: 'Open WhatsApp', altH: 'If WhatsApp does not open:', altLink: 'Alternative link', waWeb: 'WhatsApp Web', waDesk: 'Desktop app',
       copy: 'Copy message', copied: 'Message copied. Paste it in WhatsApp and send it to us.', manual: 'Or send it manually to:',
       preview: 'Show message text', edit: 'Edit request',
+      codeQ: 'Have a discount code?', codePh: 'Enter code', codeApply: 'Apply', codeOk: 'Code applied', codeBad: 'This code is not valid or has expired', codePkg: 'This code does not apply to this package', codeUsed: 'This code has reached its usage limit', codeRemove: 'Remove', discount: 'Discount',
+      cbH: 'Prefer a call?', cbP: 'Leave your name and number and we will call you to help choose the right package.', cbOpen: 'Request a call', cbWhen: 'Best time to call', cbAny: 'Any time', cbMorning: 'Morning', cbNoon: 'Afternoon', cbEvening: 'Evening', cbSend: 'Request the call', cbSending: 'Sending…', cbDone: 'Got it ✓ We will call you soon.', cbNeedName: 'Please enter your name', cbConsentErr: 'Please tick the contact consent',
+      revTitle: 'What our clients say', revSub: 'Words we are proud of', revMore: 'All reviews on Google',
       galTitle: 'Our work', galSub: 'Moments from occasions we were honoured to serve', soon: 'Photo coming soon', igMore: 'More on Instagram',
       g1: 'Welcoming guests', g2: 'Majlis setup', g3: 'Coffee & sweets', g4: 'Dinner', g5: 'Photography', g6: 'Groom preparation',
       faqTitle: 'FAQ', termsT: 'Booking terms',
@@ -228,6 +236,9 @@
     renderOffers();
     $('consentText').textContent = (en ? c.consent_en : c.consent_ar) || $('consentText').textContent;
     $('marketingText').textContent = (en ? c.marketing_en : c.marketing_ar) || $('marketingText').textContent;
+    $('cbConsentText').textContent = $('consentText').textContent;
+    $('codeBox').classList.toggle('hidden', !c.hasCodes && !state.code);
+    renderReviews();
     var t0 = (c.tiers || [])[0];
     if (t0) { $('fromH').textContent = money(Math.min.apply(null, c.tiers.map(function (t) { return t.hospitality; }))); $('fromC').textContent = money(Math.min.apply(null, c.tiers.map(function (t) { return t.comprehensive; }))); }
     $('terms').innerHTML = String((en ? c.terms_en : c.terms_ar) || '').split(/\n+/).filter(Boolean).map(function (l) { return '<li>' + esc(l.replace(/^[•\-\d.\s]+/, '')) + '</li>'; }).join('');
@@ -280,7 +291,7 @@
       box.innerHTML = '<p class="price__empty">' + esc(tr('enterGuests')) + '</p>';
       state.last = null; updateSticky(); return;
     }
-    var q = L.quote(c, p, g, area);
+    var q = priceQuote(c, p, g, area);
     state.last = q;
     if (q.special) {
       box.innerHTML = '<p class="price__label">' + esc(L.PKG[p][en ? 'en' : 'ar']) + '</p><p class="price__special">' + esc(tr('special')) + '</p><p class="price__note">' + esc(tr('specialP')) + '</p>';
@@ -291,6 +302,7 @@
         '<p class="price__amt pulse">' + money(q.total) + '<small>' + esc(tr('omrLong')) + '</small></p>' +
         '<p class="price__pkg">' + esc(L.PKG[p][en ? 'en' : 'ar']) + ' · ' + q.tier + (en ? ' guests' : ' ضيف') + '</p>' +
         '<div class="price__rows">' +
+        (q.discount ? '<div class="price__disc"><span>' + esc(tr('discount')) + ' (' + esc(state.code.code) + ')</span><b>− ' + money(q.discount) + ' ' + esc(tr('omr')) + '</b></div>' : '') +
         '<div><span>' + esc(tr('deposit')) + ' (' + c.deposit + '%)</span><b>' + money(q.deposit) + ' ' + esc(tr('omr')) + '</b></div>' +
         '<div><span>' + esc(tr('balance')) + (due ? '<br><small>' + esc(due) + '</small>' : '') + '</span><b>' + money(L.round3(q.total - q.deposit)) + ' ' + esc(tr('omr')) + '</b></div>' +
         '<div><span>' + esc(tr('hosts')) + ' / ' + esc(tr('sups')) + '</span><b>' + q.hosts + ' / ' + q.supervisors + '</b></div>' +
@@ -338,7 +350,7 @@
       package: pkg(), occasion: val('occasion'), guests: guests(), date: $('date').value, time: val('time'),
       area: $('area').value, location: $('location').value.trim(), dinner: pkg() === 'comprehensive' ? val('dinner') : '',
       name: $('name').value.trim(), phone: digits($('phone').value), notes: $('notes').value.trim(), website: $('website').value,
-      extras: $('extras').value.trim(), consent: !!state.consent, marketing: !!state.marketing, lang: state.lang, src: sessionSrc()
+      extras: $('extras').value.trim(), consent: !!state.consent, marketing: !!state.marketing, lang: state.lang, src: sessionSrc(), code: state.code ? state.code.code : ''
     };
   }
   function markInvalid(fieldId, on) { var f = $(fieldId); if (f) f.classList.toggle('invalid', on); }
@@ -374,10 +386,11 @@
       if (e.code === 'phone') { err.textContent = tr('badPhone'); err.classList.remove('hidden'); markInvalid('f-phone', true); $('phone').focus(); return; }
       if (e.code === 'rate') { err.textContent = tr('tooMany'); err.classList.remove('hidden'); return; }
       if (e.code === 'date') { markInvalid('f-date', true); err.textContent = tr('datePast'); err.classList.remove('hidden'); return; }
+      if (e.code === 'code') { state.code = null; renderCode(tr('codeBad'), 'bad'); calc(); err.textContent = tr('codeBad'); err.classList.remove('hidden'); $('codeBox').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
       if (e.code === 'consent') { setConsent(false, true); err.textContent = tr('consentReq'); err.classList.remove('hidden'); return; }
       if (e.code === 'pkg_occasion' || e.code === 'pkg_area') { err.textContent = tr(e.code === 'pkg_area' ? 'pkgAreaErr' : 'pkgOccErr'); err.classList.remove('hidden'); renderOccasions(val('occasion')); renderAreas($('area').value); return; }
       // مشكلة اتصال: نجهز الرسالة محليًا ونحفظ الطلب لإعادة المحاولة
-      var c = state.cfg, q = L.quote(c, f.package, f.guests, f.area);
+      var c = state.cfg, q = priceQuote(c, f.package, f.guests, f.area);
       var text = L.requestMessage(q.special ? c.templates.special_request : c.templates.customer_request, f, q, '—');
       var pending = store(PENDING_KEY) || []; pending.push(f); store(PENDING_KEY, pending.slice(-5));
       API.beacon({ action: 'inquiry', data: f });
@@ -468,6 +481,82 @@
     });
   }
 
+  /* ---------------- كود الخصم ---------------- */
+  function priceQuote(c, p, g, area) {
+    var q = L.quote(c, p, g, area);
+    if (!state.code || q.special) return q;
+    var d = L.codeDiscount({ active: true, type: state.code.type, value: state.code.value, package: state.code.package }, p, q.price, muscatToday(), 0);
+    return d.ok ? L.applyDiscount(q, d.discount, c.deposit) : q;
+  }
+  function renderCode(msg, cls) {
+    var m = $('codeMsg');
+    m.className = 'code__msg' + (cls ? ' ' + cls : '');
+    m.innerHTML = '';
+    if (msg) m.appendChild(document.createTextNode(msg));
+    if (state.code && cls === 'ok') {
+      var x = document.createElement('button'); x.type = 'button'; x.className = 'link'; x.textContent = tr('codeRemove');
+      x.onclick = function () { state.code = null; $('codeIn').value = ''; renderCode(''); calc(); };
+      m.appendChild(document.createTextNode(' · ')); m.appendChild(x);
+    }
+  }
+  function codeStatus() {
+    if (!state.code) return;
+    var d = L.codeDiscount({ active: true, type: state.code.type, value: state.code.value, package: state.code.package }, pkg(), 100, muscatToday(), 0);
+    renderCode(d.ok ? tr('codeOk') + ': ' + state.code.code : tr('codePkg'), d.ok ? 'ok' : 'bad');
+  }
+  function applyCode() {
+    var code = L.normCode($('codeIn').value);
+    if (!code) { $('codeIn').focus(); return; }
+    var b = $('codeApply'); b.disabled = true;
+    API.get('code', { code: code, pkg: pkg() }).then(function (r) {
+      if (r && r.ok) { state.code = r; codeStatus(); }
+      else { state.code = null; renderCode(tr(r && r.reason === 'package' ? 'codePkg' : r && r.reason === 'used' ? 'codeUsed' : 'codeBad'), 'bad'); }
+      calc();
+    }).catch(function () { renderCode(tr('codeBad'), 'bad'); }).then(function () { b.disabled = false; });
+  }
+
+  /* ---------------- آراء العملاء ---------------- */
+  var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>';
+  function renderReviews() {
+    var list = (state.cfg && state.cfg.reviews) || [], en = state.lang === 'en';
+    $('reviews').hidden = !list.length;
+    if (!list.length) return;
+    $('reviewsGrid').innerHTML = list.slice(0, 12).map(function (r) {
+      var n = Math.max(1, Math.min(5, Number(r.stars) || 5)), stars = '';
+      for (var i = 0; i < 5; i++) stars += STAR.replace('<svg ', '<svg class="' + (i < n ? '' : 'off') + '" ');
+      return '<figure class="review"><div class="review__stars" role="img" aria-label="' + n + '/5">' + stars + '</div>' +
+        '<blockquote class="review__text">' + esc((en && r.en) || r.ar) + '</blockquote>' +
+        '<figcaption class="review__who"><b>' + esc(r.name) + '</b>' + [r.occasion, r.when].filter(Boolean).map(function (x) { return ' · ' + esc(x); }).join('') + '</figcaption></figure>';
+    }).join('');
+    var g = state.cfg.review_url;
+    $('reviewsMoreP').classList.toggle('hidden', !g);
+    if (g) $('reviewsMore').href = g;
+  }
+
+  /* ---------------- اتصلوا بي ---------------- */
+  function openCallback() {
+    $('cbOpen').classList.add('hidden'); $('cbForm').classList.remove('hidden');
+    $('cbConsentRow').classList.toggle('hidden', !!state.consent);
+    if ($('name').value && !$('cbName').value) $('cbName').value = $('name').value;
+    if ($('phone').value && !$('cbPhone').value) $('cbPhone').value = $('phone').value;
+    setTimeout(function () { ($('cbName').value ? $('cbPhone') : $('cbName')).focus(); }, 50);
+  }
+  function sendCallback() {
+    var err = $('cbErr'), name = $('cbName').value.trim(), phone = digits($('cbPhone').value);
+    var consent = !!state.consent || $('cbConsent').checked;
+    var fail = function (m, el) { err.textContent = m; err.classList.remove('hidden'); if (el) el.focus(); };
+    if (!name) return fail(tr('cbNeedName'), $('cbName'));
+    if (!L.validPhone(phone)) return fail(tr('badPhone'), $('cbPhone'));
+    if (!consent) return fail(tr('cbConsentErr'), $('cbConsent'));
+    err.classList.add('hidden');
+    var b = $('cbSend'); b.disabled = true; b.textContent = tr('cbSending');
+    API.post({ action: 'callback', data: { name: name, phone: phone, when: $('cbWhen').value, consent: true, marketing: !!state.marketing, lang: state.lang, src: sessionSrc(), website: $('website').value } }).then(function () {
+      $('cbForm').classList.add('hidden'); $('cbDone').textContent = tr('cbDone'); $('cbDone').classList.remove('hidden');
+    }).catch(function (e) {
+      fail(e.code === 'phone' ? tr('badPhone') : e.code === 'rate' ? tr('tooMany') : tr('netErr'));
+    }).then(function () { b.disabled = false; b.textContent = tr('cbSend'); });
+  }
+
   /* ---------------- إحصائيات الزوار (أعداد فقط، بلا بيانات شخصية ولا كوكيز) ---------------- */
   var tracked = {};
   function sessionSrc() {
@@ -506,6 +595,11 @@
 
     $('langBtn').addEventListener('click', function () { state.lang = state.lang === 'ar' ? 'en' : 'ar'; store(LANG_KEY, state.lang); applyLang(); });
     $('form').addEventListener('submit', submit);
+    $('codeToggle').addEventListener('click', function () { $('codeRow').classList.toggle('hidden'); if (!$('codeRow').classList.contains('hidden')) $('codeIn').focus(); });
+    $('codeApply').addEventListener('click', applyCode);
+    $('codeIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); applyCode(); } });
+    $('cbOpen').addEventListener('click', openCallback);
+    $('cbSend').addEventListener('click', sendCallback);
     $('form').addEventListener('input', function () { track('start'); });
     ['waPrimary', 'waAlt', 'waWeb'].forEach(function (id) { $(id).addEventListener('click', function () { track('wa'); }); });
     // الموافقة: من وافق سابقًا على هذا الجهاز لا يُسأل مرة أخرى
@@ -521,7 +615,7 @@
     $('consent').addEventListener('change', function () { if (this.checked) $('consentErr').classList.add('hidden'); });
     $('consentShow').addEventListener('click', function () { $('consentCard').classList.remove('hidden'); $('consent').checked = true; $('consentDone').classList.add('hidden'); });
     $('form').addEventListener('change', function (e) {
-      if (e.target.name === 'package') { renderOccasions(val('occasion')); renderAreas($('area').value); }
+      if (e.target.name === 'package') { renderOccasions(val('occasion')); renderAreas($('area').value); codeStatus(); }
       if (e.target.name === 'package' || e.target.id === 'area') calc();
       if (e.target.id === 'date') { checkDate(); calc(); markInvalid('f-date', false); }
       if (e.target.name === 'occasion' || e.target.name === 'time') e.target.closest('.field').classList.remove('invalid');

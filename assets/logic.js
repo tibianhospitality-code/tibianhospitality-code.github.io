@@ -240,6 +240,7 @@ var TibianLogic = (function () {
     var v = requestVars(f, q, id);
     var text = fill(template, v);
     if (f.extras && String(template).indexOf('{سطر_الخدمات}') < 0 && String(template).indexOf('{الخدمات_الإضافية}') < 0) text += v['سطر_الخدمات'];
+    if (q && q.discount > 0 && f.code) text += '\nكود الخصم: ' + f.code + ' (خصم ' + fmtMoney(q.discount) + ' ر.ع)';
     return text;
   }
 
@@ -528,6 +529,39 @@ var TibianLogic = (function () {
       categories: Object.keys(cats).map(function (k) { return { category: k, amount: cats[k] }; }).sort(sortAmt) };
   }
 
+  /* ---------------- أكواد الخصم ---------------- */
+
+  /** توحيد كتابة الكود: أحرف كبيرة، بلا مسافات، أرقام عربية → لاتينية */
+  function normCode(s) {
+    return String(s || '').replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }).replace(/\s+/g, '').toUpperCase().slice(0, 30);
+  }
+
+  /**
+   * قيمة خصم الكود على سعر الباقة (بدون المواصلات).
+   * row: { active, code, type: 'نسبة %' | 'مبلغ ثابت', value, package: الكل/الضيافة/الشاملة, from, to, maxUses }
+   */
+  function codeDiscount(row, pkg, price, todayYmd, used) {
+    if (!row || !row.active) return { ok: false, reason: 'invalid' };
+    if ((row.from && todayYmd < row.from) || (row.to && todayYmd > row.to)) return { ok: false, reason: 'expired' };
+    var p = row.package || 'الكل';
+    if (p !== 'الكل' && !((p === 'الضيافة' && pkg === 'hospitality') || (p === 'الشاملة' && pkg === 'comprehensive'))) return { ok: false, reason: 'package' };
+    if (Number(row.maxUses) > 0 && Number(used || 0) >= Number(row.maxUses)) return { ok: false, reason: 'used' };
+    var v = Number(row.value) || 0, pr = Number(price) || 0;
+    var pct = /نسبة|%/.test(String(row.type || ''));
+    var d = pct ? round3(pr * Math.min(v, 100) / 100) : round3(Math.min(v, pr));
+    return { ok: true, discount: d, pct: pct, value: v, code: normCode(row.code) };
+  }
+
+  /** عرض السعر بعد الخصم (العربون يُحسب من الإجمالي الجديد) */
+  function applyDiscount(q, discount, depositPct) {
+    if (!q || q.special || !(Number(discount) > 0)) return q;
+    var r = {}; for (var k in q) if (Object.prototype.hasOwnProperty.call(q, k)) r[k] = q[k];
+    r.discount = round3(Math.min(Number(discount), Number(q.price) || 0));
+    r.total = round3(q.price + q.travelFee - r.discount);
+    r.deposit = depositOf(r.total, depositPct == null ? 50 : depositPct);
+    return r;
+  }
+
   /** ربح حجز واحد: الإجمالي − مصروفاته */
   function bookingProfit(b, expenses) {
     var list = (expenses || []).filter(function (x) { return x.booking === b.id; });
@@ -592,6 +626,7 @@ var TibianLogic = (function () {
     bankText: bankText, bookingVars: bookingVars, templateKey: templateKey, MONEY_MESSAGES: MONEY_MESSAGES,
     afterMessage: afterMessage, sentToday: sentToday, dashboard: dashboard, monthStats: monthStats, greetingList: greetingList,
     marketingAllowed: marketingAllowed, messageText: messageText, calendarMonth: calendarMonth, addMonths: addMonths, financeReport: financeReport,
+    normCode: normCode, codeDiscount: codeDiscount, applyDiscount: applyDiscount,
     bookingProfit: bookingProfit, SOURCES: SOURCES, SOURCE_NAMES: SOURCE_NAMES, trafficSource: trafficSource, statsSummary: statsSummary
   };
 })();

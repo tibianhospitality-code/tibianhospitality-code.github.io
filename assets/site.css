@@ -291,3 +291,36 @@ html[dir="ltr"] .consent__h { font-family: var(--f-body); }
 .consent__done { text-align: center; font-size: 13.5px; color: var(--ok); margin: 0 0 12px; }
 .consent__done .link { font-size: 13.5px; padding: 0 4px; }
 .form.locked { opacity: .45; pointer-events: none; filter: grayscale(.4); user-select: none; }
+
+/* كود الخصم */
+.code { margin-top: 10px; text-align: center; }
+.code__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 6px; }
+.code__row .input { text-transform: uppercase; letter-spacing: .5px; }
+.code__msg { margin: 6px 0 0; font-size: 14px; min-height: 0; }
+.code__msg.ok { color: var(--ok); font-weight: 600; }
+.code__msg.bad { color: var(--danger); }
+.price__disc { color: var(--ok); }
+.price__disc b { color: var(--ok); }
+
+/* اتصلوا بي */
+.callback { margin-top: 18px; text-align: center; border-style: dashed; }
+.callback__h { margin: 0; font-size: 17px; font-family: var(--f-display); }
+html[dir="ltr"] .callback__h { font-family: var(--f-body); }
+.callback__p { margin: 6px 0 12px; color: var(--grey-2); font-size: 14.5px; }
+.callback .field { text-align: start; }
+.callback .err { text-align: start; }
+.cb__consent { text-align: start; margin-top: 12px; font-size: 13.5px; }
+.callback #cbSend { margin-top: 14px; }
+.callback__done { margin: 4px 0 0; color: var(--ok); font-weight: 600; }
+
+/* آراء العملاء */
+.reviews { display: grid; gap: 12px; }
+@media (min-width: 720px) { .reviews { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1040px) { .reviews { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.review { margin: 0; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); display: grid; gap: 8px; align-content: start; }
+.review__stars { display: flex; gap: 2px; }
+.review__stars svg { width: 16px; height: 16px; fill: var(--gold-2); }
+.review__stars svg.off { fill: var(--line); }
+.review__text { margin: 0; line-height: 1.85; color: var(--charcoal); }
+.review__who { margin: 0; font-size: 13.5px; color: var(--grey-2); }
+.review__who b { color: var(--grey); }

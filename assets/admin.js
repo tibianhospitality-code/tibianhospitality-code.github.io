@@ -476,7 +476,7 @@
       ['المناسبة', b.occasion], ['الباقة', pkgName(b.package) + (b.tier ? ' · فئة ' + b.tier : '')], ['الضيوف', b.guests],
       ['التاريخ', shortDate(b.date) + (b.time ? ' — ' + b.time : '')], ['المكان', b.location || '—'],
       b.package === 'comprehensive' ? ['العشاء', b.dinner || 'لم يُحدد'] : null,
-      ['المصدر', b.source], ['أُنشئ', stamp(b.created)], b.bookedOn ? ['تاريخ التأكيد', shortDate(b.bookedOn)] : null,
+      ['المصدر', b.source], b.code && isAdmin() ? ['كود الخصم', b.code + (Number(b.discount) > 0 ? ' · خصم ' + money(b.discount) : '')] : (b.code ? ['كود الخصم', b.code] : null), ['أُنشئ', stamp(b.created)], b.bookedOn ? ['تاريخ التأكيد', shortDate(b.bookedOn)] : null,
       b.nextFollowUp && L.OPEN.indexOf(b.status) >= 0 ? ['المتابعة القادمة', shortDate(b.nextFollowUp)] : null,
       b.lastContact ? ['آخر تواصل', stamp(b.lastContact)] : null, b.extras ? ['⭐ خدمات إضافية', '<b style="color:var(--gold-ink)">' + esc(b.extras) + '</b>', true] : null, b.notes ? ['ملاحظات', b.notes] : null,
       b.consent ? ['موافقة التواصل', b.consent] : null,
@@ -652,7 +652,7 @@
       var area = c.area === '__keep' ? '' : c.area;
       var q = L.quote(cfg, c.package, c.guests, area), total;
       if (c.custom) total = Number(c.custom);
-      else if (!q.special) total = q.price + (c.travel ? Number(c.travel) : (c.area === '__keep' && b ? Number(b.travelFee || 0) : q.travelFee));
+      else if (!q.special) total = q.price + (c.travel ? Number(c.travel) : (c.area === '__keep' && b ? Number(b.travelFee || 0) : q.travelFee)) - (b && Number(b.discount) > 0 ? Math.min(Number(b.discount), q.price) : 0);
       $('livePrice').innerHTML = total != null && !isNaN(total)
         ? '<span>الإجمالي' + (c.custom ? ' (سعر خاص)' : '') + '<br><small>العربون ' + money(L.depositOf(total, cfg.deposit)) + '</small></span><b>' + money(total) + '</b>'
         : '<span>' + (c.guests ? 'باقة خاصة — أدخل سعرًا خاصًا' : 'أدخل عدد الضيوف') + '</span>';
@@ -725,6 +725,8 @@
   /* ================= الإعدادات: صفحة رئيسية وصفحات فرعية ================= */
   var SETTINGS_PAGES = [
     ['offers', 'العروض', 'أضف عروضًا متعددة وفعّلها أو أوقفها، وتظهر فورًا في صفحة العميل'],
+    ['codes', 'أكواد الخصم', 'أكواد للمؤثرين والعملاء: نسبة أو مبلغ، ومدة، وعدد استخدام، وكم حجزًا جلب كل كود'],
+    ['reviews', 'آراء العملاء', 'آراء حقيقية من عملائك تظهر في صفحة العميل'],
     ['prices', 'أسعار الباقات', 'فئات الضيوف وعدد المضيفين وسعر الضيافة والشاملة'],
     ['lists', 'أنواع المناسبات والأوقات والمناطق', 'ما يظهر للعميل في النموذج ورسوم المواصلات'],
     ['shops', 'محلات تجهيز المعرس', 'عدة محلات مع روابط مواقعها'],
@@ -744,6 +746,8 @@
     if (S.data.mustChangePin) sub = 'security';
     switch (sub) {
       case 'offers': return viewTableEditor('offers');
+      case 'codes': return viewCodes();
+      case 'reviews': return viewTableEditor('reviews');
       case 'prices': return viewTableEditor('prices');
       case 'shops': return viewTableEditor('shops');
       case 'greetings': return viewTableEditor('greetings');
@@ -764,6 +768,19 @@
 
   /* ---------- محرر الجداول (العروض، الأسعار، المحلات، التهاني، القوائم) ---------- */
   var TABLE_UI = {
+    codes: { title: 'أكواد الخصم', add: 'إضافة كود', empty: 'لا توجد أكواد بعد.',
+      intro: 'العميل يكتب الكود في صفحة الحجز فيُخصم من سعر الباقة (المواصلات لا تُخصم)، ويظهر الكود في رسالته وفي الفاتورة. الكود: حروف وأرقام بدون مسافات.',
+      cols: [{ k: 'active', l: 'الكود مفعّل', t: 'bool' }, { k: 'code', l: 'الكود', t: 'text', ltr: 1, ph: 'مثال: HESSA5', half: 1 }, { k: 'type', l: 'النوع', t: 'enum', o: [['نسبة %', 'نسبة %'], ['مبلغ ثابت', 'مبلغ ثابت (ر.ع)']], half: 1 },
+        { k: 'value', l: 'القيمة', t: 'money', half: 1 }, { k: 'package', l: 'الباقة', t: 'enum', o: [['الكل', 'كل الباقات'], ['الضيافة', 'الضيافة فقط'], ['الشاملة', 'الشاملة فقط']], half: 1 },
+        { k: 'from', l: 'يبدأ من (اختياري)', t: 'date', half: 1 }, { k: 'to', l: 'ينتهي في (اختياري)', t: 'date', half: 1 },
+        { k: 'maxUses', l: 'أقصى عدد حجوزات (اختياري)', t: 'int', half: 1 }, { k: 'note', l: 'لمن / ملاحظة', t: 'text', half: 1, ph: 'مثال: حساب المؤثرة حصة' }],
+      blank: { active: true, code: '', type: 'نسبة %', value: '', package: 'الكل', from: '', to: '', maxUses: '', note: '' }, label: function (r) { return (r.code || 'كود جديد') + (r.value ? ' — ' + r.value + (/نسبة/.test(r.type) ? '%' : ' ر.ع') : ''); } },
+    reviews: { title: 'آراء العملاء', add: 'إضافة رأي', empty: 'لا توجد آراء بعد. القسم لا يظهر في صفحة العميل حتى تضيف رأيًا.',
+      intro: 'أضف آراء حقيقية فقط وصلتك من عملائك (رسالة واتساب أو تقييم Google)، ويُفضّل أخذ إذن العميل. يمكنك كتابة الأحرف الأولى بدل الاسم الكامل.',
+      cols: [{ k: 'active', l: 'يظهر في الصفحة', t: 'bool' }, { k: 'name', l: 'اسم العميل', t: 'text', half: 1, ph: 'مثال: أم سالم' }, { k: 'stars', l: 'التقييم (1-5)', t: 'int', half: 1 },
+        { k: 'occasion', l: 'المناسبة', t: 'text', half: 1, ph: 'مثال: ملكة' }, { k: 'when', l: 'التاريخ', t: 'text', half: 1, ph: 'مثال: نوفمبر 2026' },
+        { k: 'text_ar', l: 'الرأي بالعربية', t: 'longtext' }, { k: 'text_en', l: 'بالإنجليزية (اختياري)', t: 'longtext', ltr: 1 }],
+      blank: { active: true, name: '', stars: 5, occasion: '', when: '', text_ar: '', text_en: '' }, label: function (r) { return (r.name || 'رأي جديد') + (r.stars ? ' · ' + '★'.repeat(Math.max(1, Math.min(5, r.stars))) : ''); } },
     offers: { title: 'العروض', add: 'إضافة عرض', empty: 'لا توجد عروض بعد.',
       intro: 'العروض المفعّلة تظهر في أعلى صفحة العميل وعلى بطاقة الباقة. حدّد تاريخ البداية والنهاية إن أردت أن يتوقف العرض تلقائيًا.',
       cols: [{ k: 'active', l: 'العرض مفعّل', t: 'bool' }, { k: 'text_ar', l: 'نص العرض بالعربية', t: 'text', ph: 'مثال: تلبيس المعرس مجانًا مع الباقة الشاملة' },
@@ -797,6 +814,22 @@
       blank: { name: '', fee: '', appliesTo: 'باقة الضيافة', notes: '' }, label: function (r) { return r.name || 'منطقة جديدة'; } }
   };
 
+  /** الأكواد + كم حجزًا جلب كل كود */
+  function viewCodes() {
+    var use = {};
+    S.data.bookings.forEach(function (b) {
+      if (!b.code) return;
+      var u = use[b.code] = use[b.code] || { all: 0, booked: 0, disc: 0, value: 0 };
+      if (b.status === ST.CANCELLED) return;
+      u.all++; if (L.BOOKED.indexOf(b.status) >= 0) { u.booked++; u.disc = L.round3(u.disc + (Number(b.discount) || 0)); u.value = L.round3(u.value + (Number(b.total) || 0)); }
+    });
+    var keys = Object.keys(use);
+    subShell('أكواد الخصم', '<div id="ed-codes"><div class="loading">جارٍ التحميل…</div></div>' +
+      '<div class="h2">نتائج الأكواد</div><div class="card pad fkv">' + (keys.length ? keys.map(function (k) { var u = use[k];
+        return '<div><span><b dir="ltr">' + esc(k) + '</b><br><small>' + u.all + ' طلب · ' + u.booked + ' حجز مؤكد</small></span><b>' + money(u.value) + '<br><small class="muted">خصم ' + money(u.disc) + '</small></b></div>';
+      }).join('') : '<div><span>لم يُستخدم أي كود بعد</span><b></b></div>') + '</div>');
+    mountTable($('ed-codes'), 'codes');
+  }
   function viewTableEditor(key) {
     var ui = TABLE_UI[key];
     subShell(ui.title, '<div id="ed-' + key + '"><div class="loading">جارٍ التحميل…</div></div>');
