@@ -56,6 +56,7 @@
       codeQ: 'عندك كود خصم؟', codePh: 'اكتب الكود', codeApply: 'تطبيق', codeOk: 'تم تطبيق الكود', codeBad: 'الكود غير صحيح أو انتهت صلاحيته', codePkg: 'هذا الكود لا ينطبق على هذه الباقة', codeUsed: 'هذا الكود استُخدم بالحد الأقصى', codeRemove: 'إزالة', discount: 'الخصم',
       cbH: 'تفضّل أن نتصل بك؟', cbP: 'اترك اسمك ورقمك، ونتصل بك لنساعدك في اختيار الباقة المناسبة.', cbOpen: 'اطلب اتصالًا', cbWhen: 'الوقت المناسب للاتصال', cbAny: 'أي وقت', cbMorning: 'صباحًا', cbNoon: 'بعد الظهر', cbEvening: 'مساءً', cbSend: 'اطلب الاتصال', cbSending: 'جارٍ الإرسال…', cbDone: 'وصلنا طلبك ✓ سنتصل بك قريبًا إن شاء الله.', cbNeedName: 'اكتب اسمك', cbConsentErr: 'ضع علامة الموافقة على التواصل',
       revTitle: 'آراء عملائنا', revSub: 'كلمات نعتز بها من أصحاب المناسبات', revMore: 'كل التقييمات على Google',
+      rvEmpty: 'كن أول من يشاركنا رأيه 🤍', rvOpen: 'اكتب رأيك', rvFormH: 'شاركنا رأيك في مناسبتك', rvStars: 'تقييمك', rvText: 'رأيك', rvName: 'الاسم كما تحب أن يظهر', rvOcc: 'المناسبة (اختياري)', rvPhone: 'رقم هاتفك (اختياري — لا يُنشر)', rvSend: 'إرسال الرأي', rvSending: 'جارٍ الإرسال…', rvNote: 'يظهر رأيك بعد مراجعته.', rvDone: 'شكرًا لك 🤍 وصلنا رأيك وسيظهر بعد مراجعته.', rvNeedStars: 'اختر عدد النجوم', rvNeedText: 'اكتب رأيك', rvNeedName: 'اكتب اسمك', rvGoogle: 'على Google', rvReviewsN: 'تقييم', rvFromGoogle: 'من Google', star: 'نجمة',
       galTitle: 'من أعمالنا', galSub: 'لقطات من مناسبات تشرفنا بخدمتها', soon: 'صورة قريبًا', igMore: 'المزيد على إنستغرام',
       g1: 'استقبال المعازيم', g2: 'تجهيز المجلس', g3: 'القهوة والحلوى', g4: 'العشاء', g5: 'التصوير', g6: 'تجهيز المعرس',
       faqTitle: 'أسئلة شائعة', termsT: 'شروط الحجز',
@@ -118,6 +119,7 @@
       codeQ: 'Have a discount code?', codePh: 'Enter code', codeApply: 'Apply', codeOk: 'Code applied', codeBad: 'This code is not valid or has expired', codePkg: 'This code does not apply to this package', codeUsed: 'This code has reached its usage limit', codeRemove: 'Remove', discount: 'Discount',
       cbH: 'Prefer a call?', cbP: 'Leave your name and number and we will call you to help choose the right package.', cbOpen: 'Request a call', cbWhen: 'Best time to call', cbAny: 'Any time', cbMorning: 'Morning', cbNoon: 'Afternoon', cbEvening: 'Evening', cbSend: 'Request the call', cbSending: 'Sending…', cbDone: 'Got it ✓ We will call you soon.', cbNeedName: 'Please enter your name', cbConsentErr: 'Please tick the contact consent',
       revTitle: 'What our clients say', revSub: 'Words we are proud of', revMore: 'All reviews on Google',
+      rvEmpty: 'Be the first to share your experience 🤍', rvOpen: 'Write a review', rvFormH: 'Tell us about your occasion', rvStars: 'Your rating', rvText: 'Your review', rvName: 'Your name as you would like it shown', rvOcc: 'Occasion (optional)', rvPhone: 'Your phone (optional — not published)', rvSend: 'Send review', rvSending: 'Sending…', rvNote: 'Your review appears after we check it.', rvDone: 'Thank you 🤍 We received your review; it will appear after we check it.', rvNeedStars: 'Choose a star rating', rvNeedText: 'Please write your review', rvNeedName: 'Please enter your name', rvGoogle: 'on Google', rvReviewsN: 'reviews', rvFromGoogle: 'Google', star: 'star',
       galTitle: 'Our work', galSub: 'Moments from occasions we were honoured to serve', soon: 'Photo coming soon', igMore: 'More on Instagram',
       g1: 'Welcoming guests', g2: 'Majlis setup', g3: 'Coffee & sweets', g4: 'Dinner', g5: 'Photography', g6: 'Groom preparation',
       faqTitle: 'FAQ', termsT: 'Booking terms',
@@ -517,20 +519,66 @@
 
   /* ---------------- آراء العملاء ---------------- */
   var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>';
+  function starsHtml(n) {
+    var s = '';
+    for (var i = 0; i < 5; i++) s += STAR.replace('<svg ', '<svg class="' + (i < n ? '' : 'off') + '" ');
+    return '<div class="review__stars" role="img" aria-label="' + n + '/5">' + s + '</div>';
+  }
+  var GLOGO = '<span class="g" aria-label="Google"><i>G</i><i>o</i><i>o</i><i>g</i><i>l</i><i>e</i></span>';
   function renderReviews() {
-    var list = (state.cfg && state.cfg.reviews) || [], en = state.lang === 'en';
-    $('reviews').hidden = !list.length;
-    if (!list.length) return;
-    $('reviewsGrid').innerHTML = list.slice(0, 12).map(function (r) {
-      var n = Math.max(1, Math.min(5, Number(r.stars) || 5)), stars = '';
-      for (var i = 0; i < 5; i++) stars += STAR.replace('<svg ', '<svg class="' + (i < n ? '' : 'off') + '" ');
-      return '<figure class="review"><div class="review__stars" role="img" aria-label="' + n + '/5">' + stars + '</div>' +
+    var c = state.cfg || {}, en = state.lang === 'en';
+    var own = (c.reviews || []).slice(0, 12), gg = c.google, gl = (gg && gg.reviews) || [];
+    var cards = own.map(function (r) {
+      var n = Math.max(1, Math.min(5, Number(r.stars) || 5));
+      return '<figure class="review">' + starsHtml(n) +
         '<blockquote class="review__text">' + esc((en && r.en) || r.ar) + '</blockquote>' +
         '<figcaption class="review__who"><b>' + esc(r.name) + '</b>' + [r.occasion, r.when].filter(Boolean).map(function (x) { return ' · ' + esc(x); }).join('') + '</figcaption></figure>';
-    }).join('');
-    var g = state.cfg.review_url;
+    }).concat(gl.slice(0, 6).map(function (r) {
+      var n = Math.max(1, Math.min(5, Number(r.stars) || 5));
+      var who = r.authorUrl ? '<a href="' + esc(r.authorUrl) + '" target="_blank" rel="noopener nofollow">' + esc(r.author) + '</a>' : esc(r.author);
+      return '<figure class="review">' + starsHtml(n) + '<blockquote class="review__text">' + esc(r.text) + '</blockquote>' +
+        '<figcaption class="review__who"><b>' + who + '</b>' + (r.when ? ' · ' + esc(r.when) : '') + ' · <span class="review__src">' + esc(tr('rvFromGoogle')) + '</span></figcaption></figure>';
+    }));
+    $('reviewsGrid').innerHTML = cards.join('');
+    $('rvEmpty').classList.toggle('hidden', !!cards.length || !!(gg && gg.count));
+    var sum = $('gSummary');
+    if (gg && gg.count) {
+      sum.innerHTML = '<b>' + esc(String(gg.rating.toFixed ? gg.rating.toFixed(1) : gg.rating)) + '</b>' + starsHtml(Math.round(gg.rating)) + '<span>' + gg.count + ' ' + esc(tr('rvReviewsN')) + '</span>' + GLOGO;
+      sum.href = gg.url || c.review_url || '#'; sum.classList.remove('hidden');
+    } else sum.classList.add('hidden');
+    var g = (gg && gg.url) || c.review_url;
     $('reviewsMoreP').classList.toggle('hidden', !g);
     if (g) $('reviewsMore').href = g;
+  }
+
+  /* ---------------- كتابة رأي ---------------- */
+  var rvStars = 0;
+  function drawStars() {
+    $('rvStars').innerHTML = [1, 2, 3, 4, 5].map(function (n) {
+      return '<button type="button" role="radio" aria-checked="' + (n === rvStars) + '" aria-label="' + n + ' ' + esc(tr('star')) + '" data-n="' + n + '" class="' + (n <= rvStars ? 'on' : '') + '">' + STAR + '</button>';
+    }).join('');
+  }
+  function openReview(bookingId) {
+    $('rvOpen').classList.add('hidden'); $('rvForm').classList.remove('hidden');
+    $('rvForm').dataset.booking = bookingId || '';
+    drawStars();
+    setTimeout(function () { $('rvForm').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
+  }
+  function sendReview(ev) {
+    if (ev) ev.preventDefault();
+    var err = $('rvErr'), fail = function (m, el) { err.textContent = m; err.classList.remove('hidden'); if (el) el.focus(); };
+    var text = $('rvText').value.trim(), name = $('rvName').value.trim(), phone = digits($('rvPhone').value);
+    if (!rvStars) return fail(tr('rvNeedStars'), $('rvStars').querySelector('button'));
+    if (text.replace(/\s/g, '').length < 5) return fail(tr('rvNeedText'), $('rvText'));
+    if (!name) return fail(tr('rvNeedName'), $('rvName'));
+    if (phone && !L.validPhone(phone)) return fail(tr('badPhone'), $('rvPhone'));
+    err.classList.add('hidden');
+    var b = $('rvSend'); b.disabled = true; b.textContent = tr('rvSending');
+    API.post({ action: 'review', data: { stars: rvStars, text: text, name: name, occasion: $('rvOcc').value.trim(), phone: phone, booking: $('rvForm').dataset.booking || '', website: $('rvWebsite').value } }).then(function () {
+      $('rvForm').classList.add('hidden'); $('rvDone').textContent = tr('rvDone'); $('rvDone').classList.remove('hidden');
+    }).catch(function (e) {
+      fail(e.code === 'rate' ? tr('tooMany') : e.code === 'phone' ? tr('badPhone') : tr('netErr'));
+    }).then(function () { b.disabled = false; b.textContent = tr('rvSend'); });
   }
 
   /* ---------------- اتصلوا بي ---------------- */
@@ -599,6 +647,11 @@
     $('codeApply').addEventListener('click', applyCode);
     $('codeIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); applyCode(); } });
     $('cbOpen').addEventListener('click', openCallback);
+    $('rvOpen').addEventListener('click', function () { openReview(''); });
+    $('rvForm').addEventListener('submit', sendReview);
+    $('rvStars').addEventListener('click', function (e) { var b = e.target.closest('button[data-n]'); if (!b) return; rvStars = Number(b.getAttribute('data-n')); drawStars(); var f = $('rvStars').querySelector('[data-n="' + rvStars + '"]'); if (f) f.focus(); });
+    var rq = new URLSearchParams(location.search).get('review');
+    if (rq !== null) openReview(String(rq).replace(/[^T0-9]/g, '').slice(0, 12));
     $('cbSend').addEventListener('click', sendCallback);
     $('form').addEventListener('input', function () { track('start'); });
     ['waPrimary', 'waAlt', 'waWeb'].forEach(function (id) { $(id).addEventListener('click', function () { track('wa'); }); });

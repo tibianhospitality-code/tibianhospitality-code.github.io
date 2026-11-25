@@ -34,7 +34,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"></noscript>
-<link rel="stylesheet" href="assets/site.css?v=202611251406">
+<link rel="stylesheet" href="assets/site.css?v=202611251430">
 
 <script type="application/ld+json">
 {
@@ -291,11 +291,32 @@
   </section>
 
   <!-- آراء العملاء -->
-  <section class="section" id="reviews" aria-labelledby="revTitle" hidden>
+  <section class="section" id="reviews" aria-labelledby="revTitle">
     <div class="wrap">
       <h2 class="section__title" id="revTitle" data-t="revTitle">آراء عملائنا</h2>
       <p class="section__sub" data-t="revSub">كلمات نعتز بها من أصحاب المناسبات</p>
+      <a class="gsum hidden" id="gSummary" href="#" target="_blank" rel="noopener"></a>
       <div class="reviews" id="reviewsGrid"></div>
+      <p class="rv-empty hidden" id="rvEmpty" data-t="rvEmpty">كن أول من يشاركنا رأيه 🤍</p>
+      <div class="rv-write">
+        <button type="button" class="btn btn--gold" id="rvOpen" data-t="rvOpen">اكتب رأيك</button>
+        <form class="card rv-form hidden" id="rvForm" novalidate>
+          <h3 class="rv-form__h" data-t="rvFormH">شاركنا رأيك في مناسبتك</h3>
+          <div class="field"><span class="field__label" id="rvStarsL" data-t="rvStars">تقييمك</span>
+            <div class="rv-stars" role="radiogroup" aria-labelledby="rvStarsL" id="rvStars"></div></div>
+          <div class="field"><label class="field__label" for="rvText" data-t="rvText">رأيك</label><textarea id="rvText" class="input" rows="4" maxlength="1000"></textarea></div>
+          <div class="grid2">
+            <div class="field"><label class="field__label" for="rvName" data-t="rvName">الاسم كما تحب أن يظهر</label><input id="rvName" class="input" maxlength="60" autocomplete="name"></div>
+            <div class="field"><label class="field__label" for="rvOcc" data-t="rvOcc">المناسبة (اختياري)</label><input id="rvOcc" class="input" maxlength="60"></div>
+          </div>
+          <div class="field"><label class="field__label" for="rvPhone" data-t="rvPhone">رقم هاتفك (اختياري — لا يُنشر)</label><input id="rvPhone" class="input" type="tel" inputmode="tel" dir="ltr" maxlength="20"></div>
+          <input type="text" id="rvWebsite" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
+          <p class="err hidden" id="rvErr" role="alert"></p>
+          <button type="submit" class="btn btn--gold btn--block" id="rvSend" data-t="rvSend">إرسال الرأي</button>
+          <p class="field__hint" data-t="rvNote">يظهر رأيك بعد مراجعته.</p>
+        </form>
+        <p class="rv-done hidden" id="rvDone" role="status"></p>
+      </div>
       <p class="center hidden" id="reviewsMoreP"><a class="btn btn--line" id="reviewsMore" href="#" target="_blank" rel="noopener" data-t="revMore">كل التقييمات على Google</a></p>
     </div>
   </section>
@@ -354,9 +375,9 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="assets/config.js?v=202611251406"></script>
-<script src="assets/logic.js?v=202611251406"></script>
-<script src="assets/api.js?v=202611251406"></script>
-<script src="assets/customer.js?v=202611251406"></script>
+<script src="assets/config.js?v=202611251430"></script>
+<script src="assets/logic.js?v=202611251430"></script>
+<script src="assets/api.js?v=202611251430"></script>
+<script src="assets/customer.js?v=202611251430"></script>
 </body>
 </html>

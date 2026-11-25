@@ -416,6 +416,7 @@
         : '<div class="card stat dark"><b>' + d.week.length + '</b><span>مناسبات هذا الأسبوع</span></div>') +
       '</div>' +
       '<div class="shortcuts"><a class="card" href="#calendar">' + IC.cal + '<span>التقويم</span></a>' + (isAdmin() ? '<a class="card" href="#finance">' + IC.chart + '<span>التقرير المالي</span></a>' : '') + '<a class="card" href="#stats">' + IC.eye + '<span>زوار الموقع</span></a></div>';
+    if (isAdmin() && S.data.reviewsPending) stats += '<a class="card row alert-row" href="#settings/reviews"><div class="main"><div class="name">⭐ ' + S.data.reviewsPending + ' رأي جديد بانتظار موافقتك</div><div class="meta">كتبه عملاؤك من صفحة العميل — راجعه وأظهره أو أخفه</div></div><span class="btn btn-sm">مراجعة</span></a>';
     var tasks =
       section('طلبات جديدة', d.newInquiries, 'quote', 'العرض') +
       section('متابعات اليوم', d.followUps, 'followup', 'متابعة') +
@@ -726,7 +727,7 @@
   var SETTINGS_PAGES = [
     ['offers', 'العروض', 'أضف عروضًا متعددة وفعّلها أو أوقفها، وتظهر فورًا في صفحة العميل'],
     ['codes', 'أكواد الخصم', 'أكواد للمؤثرين والعملاء: نسبة أو مبلغ، ومدة، وعدد استخدام، وكم حجزًا جلب كل كود'],
-    ['reviews', 'آراء العملاء', 'آراء حقيقية من عملائك تظهر في صفحة العميل'],
+    ['reviews', 'آراء العملاء', 'آراء يكتبها عملاؤك (تظهر بعد موافقتك)، وتقييمات Google'],
     ['prices', 'أسعار الباقات', 'فئات الضيوف وعدد المضيفين وسعر الضيافة والشاملة'],
     ['lists', 'أنواع المناسبات والأوقات والمناطق', 'ما يظهر للعميل في النموذج ورسوم المواصلات'],
     ['shops', 'محلات تجهيز المعرس', 'عدة محلات مع روابط مواقعها'],
@@ -747,7 +748,8 @@
     switch (sub) {
       case 'offers': return viewTableEditor('offers');
       case 'codes': return viewCodes();
-      case 'reviews': return viewTableEditor('reviews');
+      case 'reviews': return viewReviews();
+      case 'reviews-edit': return viewTableEditor('reviews');
       case 'prices': return viewTableEditor('prices');
       case 'shops': return viewTableEditor('shops');
       case 'greetings': return viewTableEditor('greetings');
@@ -813,6 +815,64 @@
       cols: [{ k: 'name', l: 'المنطقة / المجلس', t: 'text', half: 1 }, { k: 'fee', l: 'الرسوم (ر.ع)', t: 'money', half: 1 }, { k: 'appliesTo', l: 'تنطبق على', t: 'enum', o: [['باقة الضيافة', 'باقة الضيافة'], ['الكل', 'كل الباقات']] }, { k: 'notes', l: 'ملاحظات', t: 'text' }],
       blank: { name: '', fee: '', appliesTo: 'باقة الضيافة', notes: '' }, label: function (r) { return r.name || 'منطقة جديدة'; } }
   };
+
+  /* ================= آراء العملاء ================= */
+  function stars5(n) { n = Math.max(0, Math.min(5, Math.round(Number(n) || 0))); return '<span class="stars5" aria-label="' + n + '/5">' + '★★★★★'.slice(0, n) + '<i>' + '★★★★★'.slice(n) + '</i></span>'; }
+  function viewReviews() {
+    subShell('آراء العملاء', '<div id="rvBox"><div class="loading">جارٍ التحميل…</div></div><div class="h2">تقييمات Google</div><div id="gBox"><div class="loading">جارٍ التحقق…</div></div>');
+    api('reviews', {}).then(drawReviews).catch(function (e) { $('rvBox').innerHTML = '<div class="msg err">' + esc(errText(e)) + '</div>'; });
+  }
+  function drawReviews(r) {
+    if (!$('rvBox')) return;
+    S.reviews = r.rows;
+    var pending = r.rows.filter(function (x) { return x.source === 'العميل' && !x.checked; });
+    var rest = r.rows.filter(function (x) { return !(x.source === 'العميل' && !x.checked); });
+    var card = function (x) {
+      var st = x.source === 'العميل' && !x.checked ? '<span class="chip s-new">جديد — بانتظارك</span>' : x.active ? '<span class="chip s-confirmed">ظاهر</span>' : '<span class="chip s-cancelled">مخفي</span>';
+      return '<div class="card pad rv-card"><div class="detail-head"><h2 style="font-size:15px">' + esc(x.name) + ' ' + stars5(x.stars) + '</h2>' + st + '</div>' +
+        '<p class="rv-text">' + esc(x.text_ar) + '</p>' +
+        '<p class="small muted" style="margin:0">' + [x.occasion, x.source === 'العميل' ? 'كتبه العميل' + (x.created ? ' · ' + stamp(x.created) : '') : 'أضفته أنت', x.booking ? 'حجز ' + x.booking : '', x.phone ? '+' + x.phone : ''].filter(Boolean).map(esc).join(' · ') + '</p>' +
+        '<div class="quick" style="margin-top:10px">' + (x.active ? '<button class="btn btn-sm" data-act="rvHide" data-id="' + esc(x.id) + '">إخفاء</button>' : '<button class="btn btn-sm btn-dark" data-act="rvShow" data-id="' + esc(x.id) + '">إظهار في الموقع</button>' + (x.checked ? '' : '<button class="btn btn-sm" data-act="rvHide" data-id="' + esc(x.id) + '">إخفاء</button>')) +
+        '<button class="btn btn-sm btn-danger" data-act="rvDel" data-id="' + esc(x.id) + '">حذف</button></div></div>';
+    };
+    $('rvBox').innerHTML = '<p class="hint" style="margin:0 0 10px">عملاؤك يكتبون آراءهم من صفحة العميل (زر «اكتب رأيك»، ورابط في رسالة الشكر). لا يظهر أي رأي حتى تضغط «إظهار»، ويمكنك إخفاؤه أو حذفه متى شئت.</p>' +
+      (pending.length ? '<div class="h2">بانتظار موافقتك <span class="count">' + pending.length + '</span></div><div class="list">' + pending.map(card).join('') + '</div>' : '') +
+      '<div class="h2">كل الآراء <span class="count">' + rest.length + '</span></div>' + (rest.length ? '<div class="list">' + rest.map(card).join('') + '</div>' : '<div class="card empty">لا توجد آراء بعد.</div>') +
+      '<div class="quick" style="margin-top:10px"><a class="btn" href="#settings/reviews-edit">إضافة رأي أو تعديل النصوص</a></div>';
+    S.data.reviewsPending = pending.length;
+    drawGoogle(r.google);
+  }
+  function drawGoogle(st, msg) {
+    var box = $('gBox'); if (!box) return;
+    if (!st || !st.connected) {
+      box.innerHTML = (msg || '') + '<div class="card pad"><p class="small" style="margin-top:0">يعرض تقييمك العام في Google (مثل 4.9 ★ من 37 تقييمًا) وآخر الآراء المكتوبة هناك، في صفحة العميل، ويتحدث تلقائيًا. يحتاج «مفتاح API» من Google Cloud مرة واحدة — الخطوات في الدليل. الاستخدام هنا أقل بكثير من الحد المجاني.</p>' +
+        '<div class="field"><label for="gKey">مفتاح Google API</label><input class="input" id="gKey" type="password" dir="ltr" autocomplete="off" placeholder="AIza…"><div class="hint">يُحفظ في الخادم فقط ولا يظهر هنا مرة أخرى.</div></div>' +
+        '<div class="field"><label for="gPlace">رقم المكان (Place ID)</label><input class="input" id="gPlace" dir="ltr" autocomplete="off" value="' + esc((st && st.placeId) || '') + '" placeholder="ChIJ…"><div class="hint">من صفحة «Place ID Finder» في Google: ابحث عن «تبيان للضيافة» وانسخ الرقم.</div></div>' +
+        '<button class="btn btn-dark btn-block" data-act="gSave">ربط واختبار</button></div>';
+      return;
+    }
+    var d = st.data || {}, hid = st.hidden || [];
+    box.innerHTML = (msg || '') + '<div class="card pad">' +
+      (st.error ? '<div class="msg err">' + esc(st.error) + '</div>' : '<div class="switch"><span><b>' + esc(d.name || 'مربوط ✓') + '</b><br><span class="small muted">' + (d.rating ? d.rating + ' ★ من ' + d.count + ' تقييم' : '') + '</span></span><span class="chip ' + (st.on ? 's-confirmed' : 's-cancelled') + '">' + (st.on ? 'يظهر في الموقع' : 'مخفي من الموقع') + '</span></div>') +
+      '<div class="field"><label class="switch"><span>عرض تقييمات Google في صفحة العميل</span><input type="checkbox" id="gOn"' + (st.on ? ' checked' : '') + '></label></div>' +
+      '<div class="field"><label for="gMin">أقل عدد نجوم للرأي الظاهر</label><select class="input" id="gMin">' + [5, 4, 3, 1].map(function (n) { return '<option value="' + n + '"' + (n === st.min ? ' selected' : '') + '>' + (n === 1 ? 'كل الآراء' : n + ' نجوم فأكثر') + '</option>'; }).join('') + '</select></div>' +
+      '<div class="quick"><button class="btn btn-dark" data-act="gSaveOpts">حفظ</button><button class="btn" data-act="gRefresh">تحديث الآن</button><button class="btn btn-danger btn-sm" data-act="gOff">فصل</button></div></div>' +
+      ((d.reviews || []).length ? '<p class="small muted" style="margin:10px 0 6px">Google يعطي آخر 5 آراء تقريبًا. اضغط «إخفاء» لأي رأي لا تريده أن يظهر:</p><div class="list">' + d.reviews.map(function (x) {
+        var h = hid.indexOf(x.id) >= 0;
+        return '<div class="card pad rv-card"><div class="detail-head"><h2 style="font-size:15px">' + esc(x.author) + ' ' + stars5(x.stars) + '</h2>' + (h ? '<span class="chip s-cancelled">مخفي</span>' : (x.stars < st.min ? '<span class="chip s-cancelled">أقل من الحد</span>' : '<span class="chip s-confirmed">ظاهر</span>')) + '</div>' +
+          '<p class="rv-text">' + esc(x.text || '(بدون نص)') + '</p><p class="small muted" style="margin:0">' + esc(x.when || '') + '</p>' +
+          '<div class="quick" style="margin-top:8px"><button class="btn btn-sm" data-act="' + (h ? 'gShow' : 'gHide') + '" data-id="' + esc(x.id) + '">' + (h ? 'إظهار' : 'إخفاء') + '</button></div></div>';
+      }).join('') + '</div>' : '');
+  }
+  function reviewAct(action, id) {
+    if (action === 'delete' && !confirm('حذف هذا الرأي نهائيًا؟')) return;
+    api('reviews', { action: action, id: id }).then(function (r) { drawReviews(r); toast(action === 'show' ? 'الرأي ظاهر الآن في الموقع' : action === 'hide' ? 'تم إخفاء الرأي' : 'تم حذف الرأي'); }).catch(function (e) { toast(errText(e)); });
+  }
+  function googleAct(p, busyMsg) {
+    var box = $('gBox'); if (box && busyMsg) box.insertAdjacentHTML('afterbegin', '<div class="msg">' + esc(busyMsg) + '</div>');
+    api('google', p).then(function (st) { drawGoogle(st, st.error ? '' : (p.action === 'save' ? '<div class="msg ok">تم الحفظ ✓</div>' : '')); })
+      .catch(function (e) { drawGoogle(null, '<div class="msg err">' + esc(errText(e)) + '</div>'); });
+  }
 
   /** الأكواد + كم حجزًا جلب كل كود */
   function viewCodes() {
@@ -1122,6 +1182,15 @@
       case 'pdf': invoicePdf(id, el); break;
       case 'finCsv': financeCsv(Number(id)); break;
       case 'expAdd': sheetExpense(id); break;
+      case 'rvShow': reviewAct('show', id); break;
+      case 'rvHide': reviewAct('hide', id); break;
+      case 'rvDel': reviewAct('delete', id); break;
+      case 'gSave': googleAct({ action: 'save', key: $('gKey').value.trim(), placeId: $('gPlace').value.trim(), on: true, min: 4 }, 'جارٍ الاتصال بـ Google…'); break;
+      case 'gSaveOpts': googleAct({ action: 'save', on: $('gOn').checked, min: Number($('gMin').value) }); break;
+      case 'gRefresh': googleAct({ action: 'refresh' }, 'جارٍ التحديث…'); break;
+      case 'gOff': if (confirm('فصل تقييمات Google؟ (يُحذف المفتاح من الخادم)')) googleAct({ action: 'disconnect' }); break;
+      case 'gHide': googleAct({ action: 'hide', id: id }); break;
+      case 'gShow': googleAct({ action: 'show', id: id }); break;
       case 'expSave': saveExpense(id, el); break;
       case 'expDel': deleteExpense(id); break;
       case 'statsDays': location.hash = '#stats/' + id; break;

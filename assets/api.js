@@ -55,11 +55,13 @@
           cfg.hasCodes = true;
           cfg.reviews = params.get('reviews') === '0' ? [] : [{ name: 'أم سالم', occasion: 'ملكة', when: 'أكتوبر 2026', stars: 5, ar: 'نص تجريبي للعرض فقط', en: 'Sample text for preview only' }, { name: 'م. ع.', occasion: 'افتتاح مشروع', when: 'سبتمبر 2026', stars: 4, ar: 'نص تجريبي ثانٍ للعرض فقط', en: '' }];
           cfg.review_url = 'https://example.com/reviews';
+          cfg.google = params.get('google') === '0' ? null : { rating: 4.9, count: 37, url: 'https://example.com/maps', reviews: [{ author: 'مثال من Google', authorUrl: 'https://example.com/u', stars: 5, when: 'قبل أسبوع', text: 'نص تجريبي من Google للعرض فقط' }] };
           cfg.fullDates = [L.addDays(new Date().toISOString().slice(0, 10), 10)];
           return resolve(cfg);
         }
         if (action === 'availability') return resolve({ date: q.date, used: 1, available: true });
         if (action === 'code') { var cc = L.normCode(q.code); return resolve(cc === 'HESSA5' ? { ok: true, code: cc, type: 'نسبة %', value: 5, package: 'الكل' } : cc === 'WED20' ? (q.pkg === 'comprehensive' ? { ok: true, code: cc, type: 'مبلغ ثابت', value: 20, package: 'الشاملة' } : { ok: false, reason: 'package' }) : { ok: false, reason: 'invalid' }); }
+        if (action === 'review') { if (!q.data.name || !q.data.stars) { var e7 = new Error('text'); e7.code = 'text'; return reject(e7); } return resolve({ ok: true }); }
         if (action === 'callback') { if (q.data.consent !== true) { var e5 = new Error('consent'); e5.code = 'consent'; return reject(e5); } return resolve({ id: 'T' + (mockSeq++) }); }
         if (action === 'inquiry') {
           var f = q.data, cfg2 = JSON.parse(JSON.stringify(C.fallback));

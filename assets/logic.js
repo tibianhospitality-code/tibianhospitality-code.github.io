@@ -332,7 +332,8 @@ var TibianLogic = (function () {
       'محل_التجهيز': s.groom_shop_name || '(اسم المحل)', 'موقع_المحل': s.groom_shop_map || '',
       'محلات_التجهيز': (ctx && ctx.shops || []).filter(function (x) { return x.active !== false; }).map(function (x) { return '🏪 ' + x.name + (x.map ? '\n📍 ' + x.map : ''); }).join('\n\n'),
       'إنستغرام': s.instagram || '',
-      'رابط_التقييم': s.review_url || ''
+      'رابط_التقييم': s.review_url || '',
+      'رابط_رأيك': s.admin_url ? String(s.admin_url).replace(/admin\/?(#.*)?$/, '') + '?review=' + encodeURIComponent(b.id || '') + '#reviews' : ''
     };
     if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) v[k] = extra[k];
     return v;
@@ -346,6 +347,8 @@ var TibianLogic = (function () {
     var text = fill(tpl, vars);
     var link = vars && vars['رابط_التقييم'];
     if (key === 'thank_you' && link && String(tpl).indexOf('{رابط_التقييم}') < 0) text += '\n\n⭐ يسعدنا تقييمكم لنا على Google:\n' + link;
+    var own = vars && vars['رابط_رأيك'];
+    if (key === 'thank_you' && own && String(tpl).indexOf('{رابط_رأيك}') < 0) text += '\n\n✍️ أو اكتب رأيك في موقعنا:\n' + own;
     return text;
   }
 

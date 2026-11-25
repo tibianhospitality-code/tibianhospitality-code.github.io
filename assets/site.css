@@ -324,3 +324,25 @@ html[dir="ltr"] .callback__h { font-family: var(--f-body); }
 .review__text { margin: 0; line-height: 1.85; color: var(--charcoal); }
 .review__who { margin: 0; font-size: 13.5px; color: var(--grey-2); }
 .review__who b { color: var(--grey); }
+
+/* آراء: Google + كتابة رأي */
+.gsum { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 auto 18px; padding: 10px 16px; width: fit-content; max-width: 100%; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--charcoal); text-decoration: none; box-shadow: var(--shadow); font-size: 14.5px; flex-wrap: wrap; }
+.gsum b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.gsum .review__stars svg { width: 15px; height: 15px; }
+.gsum .g { font-weight: 700; letter-spacing: .2px; }
+.gsum .g i { font-style: normal; } .gsum .g i:nth-child(1){color:#4285F4} .gsum .g i:nth-child(2){color:#EA4335} .gsum .g i:nth-child(3){color:#FBBC05} .gsum .g i:nth-child(4){color:#4285F4} .gsum .g i:nth-child(5){color:#34A853} .gsum .g i:nth-child(6){color:#EA4335}
+.review__src { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--grey-2); }
+.review__who a { color: inherit; }
+.rv-empty { text-align: center; color: var(--grey-2); margin: 0 0 12px; }
+.rv-write { margin-top: 18px; text-align: center; }
+.rv-form { text-align: start; margin-top: 12px; }
+.rv-form__h { margin: 0; font-size: 17px; font-family: var(--f-display); }
+html[dir="ltr"] .rv-form__h { font-family: var(--f-body); }
+.rv-stars { display: flex; gap: 4px; direction: ltr; justify-content: flex-start; }
+html[dir="rtl"] .rv-stars { justify-content: flex-end; }
+.rv-stars button { background: none; border: 0; padding: 4px; cursor: pointer; border-radius: 8px; line-height: 0; }
+.rv-stars button svg { width: 32px; height: 32px; fill: var(--line); transition: fill .15s; }
+.rv-stars button.on svg { fill: var(--gold-2); }
+.rv-stars button:focus-visible { outline: 3px solid var(--gold-2); }
+.rv-form #rvSend { margin-top: 14px; }
+.rv-done { color: var(--ok); font-weight: 600; margin: 10px 0 0; }
