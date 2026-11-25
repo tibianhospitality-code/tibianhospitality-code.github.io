@@ -338,7 +338,7 @@
       package: pkg(), occasion: val('occasion'), guests: guests(), date: $('date').value, time: val('time'),
       area: $('area').value, location: $('location').value.trim(), dinner: pkg() === 'comprehensive' ? val('dinner') : '',
       name: $('name').value.trim(), phone: digits($('phone').value), notes: $('notes').value.trim(), website: $('website').value,
-      extras: $('extras').value.trim(), consent: !!state.consent, marketing: !!state.marketing, lang: state.lang
+      extras: $('extras').value.trim(), consent: !!state.consent, marketing: !!state.marketing, lang: state.lang, src: sessionSrc()
     };
   }
   function markInvalid(fieldId, on) { var f = $(fieldId); if (f) f.classList.toggle('invalid', on); }
@@ -468,6 +468,30 @@
     });
   }
 
+  /* ---------------- إحصائيات الزوار (أعداد فقط، بلا بيانات شخصية ولا كوكيز) ---------------- */
+  var tracked = {};
+  function sessionSrc() {
+    try {
+      var s = sessionStorage.getItem('tibian_src');
+      if (!s) {
+        var q = new URLSearchParams(location.search);
+        s = L.trafficSource(document.referrer, q.get('src') || q.get('utm_source'), location.host);
+        sessionStorage.setItem('tibian_src', s);
+      }
+      return s;
+    } catch (e) { return 'direct'; }
+  }
+  function track(e) {
+    if (tracked[e] || API.mock || navigator.webdriver || /bot|crawl|spider|preview|lighthouse/i.test(navigator.userAgent)) return;
+    tracked[e] = true;
+    var body = { action: 'track', e: e, src: sessionSrc() };
+    if (e === 'view') {
+      var day = muscatToday();
+      if (store('tibian_seen') !== day) { body.n = true; store('tibian_seen', day); }
+    }
+    API.beacon(body);
+  }
+
   /* ---------------- البداية ---------------- */
   function init() {
     var q = new URLSearchParams(location.search);
@@ -476,11 +500,14 @@
     $('date').min = muscatToday();
     applyLang();
     loadConfig();
+    track('view');
     watchSticky();
     retryPending();
 
     $('langBtn').addEventListener('click', function () { state.lang = state.lang === 'ar' ? 'en' : 'ar'; store(LANG_KEY, state.lang); applyLang(); });
     $('form').addEventListener('submit', submit);
+    $('form').addEventListener('input', function () { track('start'); });
+    ['waPrimary', 'waAlt', 'waWeb'].forEach(function (id) { $(id).addEventListener('click', function () { track('wa'); }); });
     // الموافقة: من وافق سابقًا على هذا الجهاز لا يُسأل مرة أخرى
     var sc = savedConsent();
     if (sc) { $('consent').checked = true; $('marketing').checked = !!sc.marketing; }
@@ -489,6 +516,7 @@
       if (!$('consent').checked) { $('consentErr').classList.remove('hidden'); return; }
       $('consentErr').classList.add('hidden');
       setConsent(true, true);
+      track('consent');
     });
     $('consent').addEventListener('change', function () { if (this.checked) $('consentErr').classList.add('hidden'); });
     $('consentShow').addEventListener('click', function () { $('consentCard').classList.remove('hidden'); $('consent').checked = true; $('consentDone').classList.add('hidden'); });

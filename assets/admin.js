@@ -51,6 +51,7 @@
   }
 
   var IC = {
+    eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>',
     cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
     chart: '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
     home: '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
@@ -182,6 +183,7 @@
       case 'greetings': return viewGreetings(r[1] ? decodeURIComponent(r[1]) : '');
       case 'settings': return viewSettings(r[1]);
       case 'calendar': return viewCalendar(r[1], r[2]);
+      case 'stats': return viewStats(r[1]);
       case 'finance': return isAdmin() ? viewFinance(r[1]) : viewHome();
       default: return viewHome();
     }
@@ -219,11 +221,11 @@
   /* ================= التقرير المالي (للمدير) ================= */
   function viewFinance(year) {
     year = /^\d{4}$/.test(year || '') ? Number(year) : Number(today().slice(0, 4));
-    var r = L.financeReport(S.data.bookings, S.data.payments || [], year), t = r.total;
+    var r = L.financeReport(S.data.bookings, S.data.payments || [], year, S.data.expenses || []), t = r.total;
     var curM = Number(today().slice(5, 7)) - 1, isCur = year === Number(today().slice(0, 4));
     var rows = r.months.map(function (m, i) {
       var empty = !m.events && !m.collected;
-      return '<tr class="' + (isCur && i === curM ? 'cur' : '') + (empty ? ' dim' : '') + '"><th>' + MONTHS_AR[i] + '</th><td>' + m.events + '</td><td>' + L.fmtMoney(m.value) + '</td><td>' + L.fmtMoney(m.collected) + '</td><td>' + L.fmtMoney(m.outstanding) + '</td></tr>';
+      return '<tr class="' + (isCur && i === curM ? 'cur' : '') + (empty ? ' dim' : '') + '"><th>' + MONTHS_AR[i] + '</th><td>' + m.events + '</td><td>' + L.fmtMoney(m.value) + '</td><td>' + L.fmtMoney(m.collected) + '</td><td>' + L.fmtMoney(m.outstanding) + '</td><td>' + L.fmtMoney(m.expenses) + '</td><td class="' + (m.profit < 0 ? 'neg' : '') + '">' + L.fmtMoney(m.profit) + '</td></tr>';
     }).join('');
     shell('التقرير المالي',
       '<div class="cal-nav"><a class="btn btn-sm" href="#finance/' + (year - 1) + '" aria-label="السنة السابقة">→</a><b>' + year + '</b><a class="btn btn-sm" href="#finance/' + (year + 1) + '" aria-label="السنة التالية">←</a></div>' +
@@ -232,11 +234,15 @@
       '<div class="card stat"><b>' + L.fmtMoney(t.collected) + '</b><span>المحصّل فعليًا (ر.ع)</span></div>' +
       '<div class="card stat dark"><b>' + L.fmtMoney(t.outstanding) + '</b><span>المتبقي للتحصيل (ر.ع)</span></div>' +
       '<div class="card stat"><b>' + t.events + '</b><span>مناسبة مؤكدة · متوسط ' + L.fmtMoney(Math.round(t.avg)) + ' ر.ع</span></div>' +
+      '<div class="card stat"><b>' + L.fmtMoney(t.expenses) + '</b><span>المصروفات (ر.ع)</span></div>' +
+      '<div class="card stat ' + (t.profit >= 0 ? 'ok' : 'bad') + '"><b>' + L.fmtMoney(t.profit) + '</b><span>صافي الربح (ر.ع) · ' + t.margin + '%</span></div>' +
       '</div>' +
-      '<div class="h2">حسب الشهر</div><div class="card fin-wrap"><table class="fin"><thead><tr><th>الشهر</th><th>مناسبات</th><th>القيمة</th><th>المحصّل</th><th>المتبقي</th></tr></thead><tbody>' + rows +
-      '</tbody><tfoot><tr><th>المجموع</th><td>' + t.events + '</td><td>' + L.fmtMoney(t.value) + '</td><td>' + L.fmtMoney(t.collected) + '</td><td>' + L.fmtMoney(t.outstanding) + '</td></tr></tfoot></table></div>' +
-      '<p class="muted small" style="margin:6px 0 0">القيمة والمتبقي حسب شهر المناسبة، والمحصّل حسب تاريخ استلام الدفعة.</p>' +
-      '<div class="h2">تفاصيل السنة</div><div class="card pad kv">' +
+      '<div class="h2">حسب الشهر</div><div class="card fin-wrap"><table class="fin"><thead><tr><th>الشهر</th><th>مناسبات</th><th>القيمة</th><th>المحصّل</th><th>المتبقي</th><th>المصروفات</th><th>الربح</th></tr></thead><tbody>' + rows +
+      '</tbody><tfoot><tr><th>المجموع</th><td>' + t.events + '</td><td>' + L.fmtMoney(t.value) + '</td><td>' + L.fmtMoney(t.collected) + '</td><td>' + L.fmtMoney(t.outstanding) + '</td><td>' + L.fmtMoney(t.expenses) + '</td><td>' + L.fmtMoney(t.profit) + '</td></tr></tfoot></table></div>' +
+      '<p class="muted small" style="margin:6px 0 0">القيمة والمتبقي ومصروفات المناسبات حسب شهر المناسبة، والمحصّل حسب تاريخ استلام الدفعة، والمصروفات العامة حسب تاريخها. الربح = قيمة المناسبات − المصروفات.</p>' +
+      '<div class="h2">المصروفات <span class="sub">عامة: ' + money(t.general) + '</span></div><div class="card pad fkv">' + (r.categories.length ? r.categories.map(function (c) { return '<div><span>' + esc(c.category) + '</span><b>' + money(c.amount) + '</b></div>'; }).join('') : '<div><span>لا توجد مصروفات مسجّلة هذه السنة</span><b></b></div>') + '</div>' +
+      '<button class="btn btn-sm" style="margin-top:8px" data-act="expAdd" data-id="">+ مصروف عام (معدات، إعلانات…)</button>' + generalList(year) +
+      '<div class="h2">تفاصيل السنة</div><div class="card pad fkv">' +
       '<div><span>باقة الضيافة</span><b>' + t.hospitality + '</b></div><div><span>الباقة الشاملة</span><b>' + t.comprehensive + '</b></div>' +
       '<div><span>طلبات وصلت هذه السنة</span><b>' + t.inquiries + '</b></div>' +
       '<div><span>حجوزات ملغاة بعد الدفع</span><b>' + t.cancelled + (t.retained ? ' · ' + money(t.retained) + ' مدفوعة' : '') + '</b></div>' +
@@ -244,16 +250,108 @@
       '<button class="btn btn-block" style="margin-top:14px" data-act="finCsv" data-id="' + year + '">تنزيل التقرير (Excel / CSV)</button>',
       { back: '#home' });
   }
+  /* ================= المصروفات (للمدير) ================= */
+  var EXP_CATS = ['الفريق', 'الطعام والقهوة', 'المواصلات', 'المستلزمات', 'أخرى'];
+  function expensesHtml(b) {
+    var pr = L.bookingProfit(b, S.data.expenses || []);
+    if (b.status === ST.CANCELLED && !pr.items.length) return '';
+    return '<div class="h2">المصروفات والربح</div><div class="card pad">' +
+      (pr.items.length ? pr.items.map(function (x) {
+        return '<div class="pay-row"><span>' + esc(x.category) + (x.note ? ' · ' + esc(x.note) : '') + ' <span class="muted small">' + esc(shortDate(x.date)) + '</span></span><b>' + money(x.amount) + '</b>' +
+          '<button class="x-btn" data-act="expDel" data-id="' + esc(x.id) + '" aria-label="حذف المصروف">×</button></div>';
+      }).join('') : '<p class="small muted" style="margin:0">لا توجد مصروفات مسجّلة لهذه المناسبة بعد.</p>') +
+      '<div class="money" style="margin-top:10px"><div><b>' + L.fmtMoney(b.total) + '</b><span>الإجمالي</span></div><div><b>' + L.fmtMoney(pr.spent) + '</b><span>المصروفات</span></div>' +
+      '<div class="' + (pr.profit >= 0 ? 'zero' : 'due') + '"><b>' + L.fmtMoney(pr.profit) + '</b><span>الربح · ' + pr.margin + '%</span></div></div>' +
+      '<button class="btn btn-sm" style="margin-top:10px" data-act="expAdd" data-id="' + esc(b.id) + '">+ إضافة مصروف</button></div>';
+  }
+  function generalList(year) {
+    var list = (S.data.expenses || []).filter(function (x) { return !x.booking && String(x.date).slice(0, 4) === String(year); });
+    if (!list.length) return '';
+    return '<div class="card pad" style="margin-top:8px">' + list.map(function (x) {
+      return '<div class="pay-row"><span>' + esc(x.category) + (x.note ? ' · ' + esc(x.note) : '') + ' <span class="muted small">' + esc(shortDate(x.date)) + '</span></span><b>' + money(x.amount) + '</b>' +
+        '<button class="x-btn" data-act="expDel" data-id="' + esc(x.id) + '" aria-label="حذف المصروف">×</button></div>';
+    }).join('') + '</div>';
+  }
+  function sheetExpense(bookingId) {
+    var b = bookingId ? S.byId[bookingId] : null;
+    openSheet('<h3>' + (b ? 'مصروف لمناسبة ' + esc(b.name) : 'مصروف عام') + '</h3>' +
+      '<div class="grid2"><div class="field"><label for="x_amt">المبلغ (ر.ع)</label><input class="input" id="x_amt" inputmode="decimal" dir="ltr" placeholder="0"></div>' +
+      '<div class="field"><label for="x_date">التاريخ</label><input class="input" id="x_date" type="date" value="' + esc(today()) + '"></div></div>' +
+      '<div class="field"><label>النوع</label><div class="seg seg3" id="x_cat">' + EXP_CATS.map(function (c, i) { return '<label><input type="radio" name="x_cat" value="' + esc(c) + '"' + (i ? '' : ' checked') + '><span>' + esc(c) + '</span></label>'; }).join('') + '</div></div>' +
+      '<div class="field"><label for="x_note">ملاحظة (اختياري)</label><input class="input" id="x_note" maxlength="120" placeholder="مثال: 3 مضيفين، قهوة وتمر"></div>' +
+      '<div id="sheetMsg"></div><button class="btn btn-dark btn-block" data-act="expSave" data-id="' + esc(bookingId || '') + '">حفظ المصروف</button>');
+    setTimeout(function () { var a = $('x_amt'); if (a) a.focus(); }, 250);
+  }
+  function saveExpense(bookingId, btn) {
+    var amt = digits($('x_amt').value).replace(/[^\d.]/g, '');
+    if (!(Number(amt) > 0)) { $('sheetMsg').innerHTML = '<div class="msg err">اكتب المبلغ</div>'; return; }
+    var cat = (document.querySelector('input[name="x_cat"]:checked') || {}).value || 'أخرى';
+    btn.disabled = true; btn.textContent = 'جارٍ الحفظ…';
+    api('expense', { action: 'add', row: { booking: bookingId || '', amount: amt, category: cat, date: $('x_date').value, note: $('x_note').value } }).then(function (r) {
+      S.data.expenses = r.expenses; S.mut = (S.mut || 0) + 1; saveData(); closeSheet(); render(); toast('تم حفظ المصروف');
+    }).catch(function (e) { btn.disabled = false; btn.textContent = 'حفظ المصروف'; $('sheetMsg').innerHTML = '<div class="msg err">' + esc(errText(e)) + '</div>'; });
+  }
+  function deleteExpense(id) {
+    var x = (S.data.expenses || []).filter(function (e) { return e.id === id; })[0];
+    if (!x || !confirm('حذف مصروف «' + x.category + '» بمبلغ ' + money(x.amount) + '؟')) return;
+    api('expense', { action: 'delete', id: id }).then(function (r) {
+      S.data.expenses = r.expenses; S.mut = (S.mut || 0) + 1; saveData(); render(); toast('تم حذف المصروف');
+    }).catch(function (e) { toast(errText(e)); });
+  }
+
+  /* ================= زوار الموقع ================= */
+  function viewStats(days) {
+    days = [7, 30, 90].indexOf(Number(days)) >= 0 ? Number(days) : 30;
+    shell('زوار الموقع', '<div id="statsBox"><div class="loading">جارٍ تحميل الإحصائيات…</div></div>', { back: '#home' });
+    var draw = function (res) {
+      if (!$('statsBox')) return;
+      var to = res.today, from = L.addDays(to, -(days - 1));
+      var s = L.statsSummary(res.rows, from, to), t = s.total;
+      var pct = function (a, b) { return b ? Math.round(a / b * 100) + '%' : '—'; };
+      var base = t.visitors || t.views;
+      var funnel = [['زاروا الصفحة', base, ''], ['وافقوا وبدؤوا', t.consent, pct(t.consent, base)], ['بدؤوا التعبئة', t.started, pct(t.started, base)], ['أرسلوا طلبًا', t.requests, pct(t.requests, base)]];
+      var maxF = Math.max.apply(null, funnel.map(function (f) { return f[1]; }).concat([1]));
+      var maxS = Math.max.apply(null, s.sources.map(function (x) { return x.visits; }).concat([1]));
+      var byDay = {}; s.days.forEach(function (d) { byDay[d.date] = d; });
+      var series = []; for (var i = days - 1; i >= 0; i--) { var dd = L.addDays(to, -i); series.push(byDay[dd] || { date: dd, views: 0, visitors: 0, requests: 0 }); }
+      var maxD = Math.max.apply(null, series.map(function (d) { return d.visitors || d.views; }).concat([1]));
+      var site = new URL(SITE_URL, location.href).href.replace(/[?#].*$/, '');
+      var links = [['إنستغرام (الرابط في البايو والقصص)', 'ig'], ['واتساب (الحالة والرسائل)', 'wa'], ['تيك توك', 'tt'], ['سناب شات', 'sc'], ['Google (ملف النشاط)', 'g']];
+      $('statsBox').innerHTML =
+        '<div class="filters" style="margin-bottom:12px">' + [7, 30, 90].map(function (n) { return '<button type="button" data-act="statsDays" data-id="' + n + '" class="' + (n === days ? 'on' : '') + '">' + (n === 7 ? 'آخر 7 أيام' : 'آخر ' + n + ' يومًا') + '</button>'; }).join('') + '</div>' +
+        '<div class="stats"><div class="card stat"><b>' + base + '</b><span>زائر</span></div><div class="card stat"><b>' + t.requests + '</b><span>طلب من الموقع</span></div>' +
+        '<div class="card stat dark"><b>' + t.conversion + '%</b><span>نسبة التحويل (طلب ÷ زائر)</span></div><div class="card stat"><b>' + t.wa + '</b><span>فتحوا واتساب بعد الطلب</span></div></div>' +
+        '<div class="h2">رحلة الزائر</div><div class="card pad bars">' + funnel.map(function (f) {
+          return '<div class="bar-row"><span>' + f[0] + '</span><div class="bar"><i style="width:' + Math.max(2, Math.round(f[1] / maxF * 100)) + '%"></i></div><b>' + f[1] + (f[2] ? ' <small>' + f[2] + '</small>' : '') + '</b></div>';
+        }).join('') + '</div>' +
+        '<div class="h2">من أين جاؤوا</div><div class="card pad bars">' + (s.sources.length ? s.sources.map(function (x) {
+          return '<div class="bar-row"><span>' + esc(x.name) + '</span><div class="bar gold"><i style="width:' + Math.max(2, Math.round(x.visits / maxS * 100)) + '%"></i></div><b>' + x.visits + '</b></div>';
+        }).join('') : '<p class="muted small" style="margin:0">لا توجد زيارات في هذه الفترة بعد.</p>') + '</div>' +
+        '<div class="h2">كل يوم <span class="sub">الأعمدة = الزوار · النقطة = طلب</span></div><div class="card pad"><div class="spark" style="--n:' + series.length + '">' + series.map(function (d) {
+          var v = d.visitors || d.views;
+          return '<div title="' + esc(shortDate(d.date)) + ': ' + v + ' زائر، ' + d.requests + ' طلب"><i style="height:' + Math.round(v / maxD * 100) + '%"></i>' + (d.requests ? '<em></em>' : '') + '</div>';
+        }).join('') + '</div><div class="spark-axis"><span>' + esc(shortDate(series[0].date)) + '</span><span>' + esc(shortDate(to)) + '</span></div></div>' +
+        '<div class="h2">روابط للتتبع</div><div class="card pad"><p class="small" style="margin:0 0 10px">ضع هذه الروابط في حساباتك بدل الرابط العادي، لتعرف بدقة أي منصة تجلب الطلبات:</p>' +
+        links.map(function (l) { var u = site + '?src=' + l[1]; return '<div class="link-row"><span><b>' + esc(l[0]) + '</b><br><code dir="ltr">' + esc(u) + '</code></span><button class="btn btn-sm" data-act="copyLink" data-link="' + esc(u) + '">نسخ</button></div>'; }).join('') + '</div>' +
+        '<p class="muted small" style="margin:10px 0 0">أعداد فقط بدون أي بيانات شخصية أو كوكيز. الزائر = جهاز واحد في اليوم.</p>';
+    };
+    if (S.stats && Date.now() - S.stats.at < 120000) return draw(S.stats.res);
+    api('stats', { days: 90 }).then(function (res) { S.stats = { at: Date.now(), res: res }; draw(res); })
+      .catch(function (e) { if ($('statsBox')) $('statsBox').innerHTML = '<div class="card empty">' + esc(errText(e)) + '</div>'; });
+  }
+
   function financeCsv(year) {
-    var r = L.financeReport(S.data.bookings, S.data.payments || [], year), t = r.total;
-    var lines = [['الشهر', 'عدد المناسبات', 'قيمة المناسبات', 'المحصّل', 'المتبقي', 'الضيافة', 'الشاملة']];
-    r.months.forEach(function (m, i) { lines.push([MONTHS_AR[i] + ' ' + year, m.events, m.value, m.collected, m.outstanding, m.hospitality, m.comprehensive]); });
-    lines.push(['المجموع', t.events, t.value, t.collected, t.outstanding, t.hospitality, t.comprehensive]);
+    var r = L.financeReport(S.data.bookings, S.data.payments || [], year, S.data.expenses || []), t = r.total;
+    var lines = [['الشهر', 'عدد المناسبات', 'قيمة المناسبات', 'المحصّل', 'المتبقي', 'المصروفات', 'الربح', 'الضيافة', 'الشاملة']];
+    r.months.forEach(function (m, i) { lines.push([MONTHS_AR[i] + ' ' + year, m.events, m.value, m.collected, m.outstanding, m.expenses, m.profit, m.hospitality, m.comprehensive]); });
+    lines.push(['المجموع', t.events, t.value, t.collected, t.outstanding, t.expenses, t.profit, t.hospitality, t.comprehensive]);
     lines.push([]); lines.push(['المناسبات المؤكدة ' + year]);
-    lines.push(['رقم الحجز', 'الاسم', 'التاريخ', 'الباقة', 'الضيوف', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', 'رقم الفاتورة']);
+    lines.push(['رقم الحجز', 'الاسم', 'التاريخ', 'الباقة', 'الضيوف', 'الإجمالي', 'المدفوع', 'المتبقي', 'المصروفات', 'الربح', 'الحالة', 'رقم الفاتورة']);
     S.data.bookings.filter(function (b) { return String(b.date).slice(0, 4) === String(year) && L.BOOKED.indexOf(b.status) >= 0; })
       .sort(function (a, b) { return a.date < b.date ? -1 : 1; })
-      .forEach(function (b) { lines.push([b.id, b.name, b.date, pkgName(b.package), b.guests, b.total, b.paid, b.balance, b.status, b.invoiceNo || '']); });
+      .forEach(function (b) { var p = L.bookingProfit(b, S.data.expenses); lines.push([b.id, b.name, b.date, pkgName(b.package), b.guests, b.total, b.paid, b.balance, p.spent, p.profit, b.status, b.invoiceNo || '']); });
+    lines.push([]); lines.push(['المصروفات ' + year]); lines.push(['التاريخ', 'رقم الحجز', 'النوع', 'المبلغ', 'ملاحظة']);
+    (S.data.expenses || []).filter(function (x) { return String(x.date).slice(0, 4) === String(year); }).forEach(function (x) { lines.push([x.date, x.booking || 'عام', x.category, x.amount, x.note]); });
     var csv = '\ufeff' + lines.map(function (l) { return l.map(function (v) { v = String(v == null ? '' : v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','); }).join('\r\n');
     var url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), a = document.createElement('a');
     a.href = url; a.download = 'تقرير-تبيان-' + year + '.csv'; document.body.appendChild(a); a.click(); a.remove();
@@ -317,7 +415,7 @@
       (isAdmin() ? '<div class="card stat dark"><b>' + L.fmtMoney(st.outstanding) + '</b><span>المتبقي للتحصيل (ر.ع)</span></div>'
         : '<div class="card stat dark"><b>' + d.week.length + '</b><span>مناسبات هذا الأسبوع</span></div>') +
       '</div>' +
-      '<div class="shortcuts"><a class="card" href="#calendar">' + IC.cal + '<span>التقويم</span></a>' + (isAdmin() ? '<a class="card" href="#finance">' + IC.chart + '<span>التقرير المالي</span></a>' : '') + '</div>';
+      '<div class="shortcuts"><a class="card" href="#calendar">' + IC.cal + '<span>التقويم</span></a>' + (isAdmin() ? '<a class="card" href="#finance">' + IC.chart + '<span>التقرير المالي</span></a>' : '') + '<a class="card" href="#stats">' + IC.eye + '<span>زوار الموقع</span></a></div>';
     var tasks =
       section('طلبات جديدة', d.newInquiries, 'quote', 'العرض') +
       section('متابعات اليوم', d.followUps, 'followup', 'متابعة') +
@@ -421,7 +519,7 @@
       (used >= max && !booked && !cancelled ? '<div class="msg warn">⚠️ هذا التاريخ مكتمل (' + used + ' من ' + max + ' مناسبات مؤكدة)</div>' : '') +
       '<div class="quick" style="margin:12px 0"><a class="btn btn-sm" href="tel:+' + esc(b.phone) + '">اتصال</a>' +
       '<a class="btn btn-sm btn-wa" href="' + esc(mobile ? 'whatsapp://send?phone=' + b.phone : 'https://api.whatsapp.com/send?phone=' + b.phone) + '"' + (mobile ? '' : ' target="_blank" rel="noopener"') + '>' + IC.wa + 'محادثة</a></div>' +
-      '<dl class="kv">' + kv + '</dl></div>' + moneyHtml +
+      '<dl class="kv">' + kv + '</dl></div>' + moneyHtml + (admin ? expensesHtml(b) : '') +
       '<div class="h2">الإجراءات</div><div class="actions">' + A.join('') + '</div>', { back: '#bookings' });
     if (sendKey && MSG_LABELS[sendKey] && !(L.MONEY_MESSAGES.indexOf(sendKey) >= 0 && !admin)) {
       var done = L.sentToday(b, L.templateKey(sendKey, b), today());
@@ -990,6 +1088,11 @@
       case 'invoice': makeInvoice(id, el); break;
       case 'pdf': invoicePdf(id, el); break;
       case 'finCsv': financeCsv(Number(id)); break;
+      case 'expAdd': sheetExpense(id); break;
+      case 'expSave': saveExpense(id, el); break;
+      case 'expDel': deleteExpense(id); break;
+      case 'statsDays': location.hash = '#stats/' + id; break;
+      case 'copyLink': copy(el.getAttribute('data-link')); toast('تم نسخ الرابط'); break;
       case 'pdfShare': sharePdf(); break;
       case 'pdfSave': savePdf(); break;
       case 'autoInstall': loadAutomation('install'); break;

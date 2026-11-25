@@ -476,11 +476,24 @@ var TibianLogic = (function () {
    * تقرير سنة: لكل شهر (حسب تاريخ المناسبة) عدد المناسبات وقيمتها والمتبقي منها،
    * والمحصّل (حسب تاريخ الدفعة). الملغاة لا تدخل في القيمة، لكن ما دُفع فيها يظهر كمحتجز.
    */
-  function financeReport(all, payments, year) {
+  function financeReport(all, payments, year, expenses) {
     year = String(year);
     var months = [];
-    for (var i = 0; i < 12; i++) months.push({ m: i + 1, events: 0, value: 0, collected: 0, outstanding: 0, hospitality: 0, comprehensive: 0 });
-    var tot = { events: 0, value: 0, collected: 0, outstanding: 0, hospitality: 0, comprehensive: 0, cancelled: 0, retained: 0, inquiries: 0 };
+    for (var i = 0; i < 12; i++) months.push({ m: i + 1, events: 0, value: 0, collected: 0, outstanding: 0, hospitality: 0, comprehensive: 0, expenses: 0, profit: 0 });
+    var tot = { events: 0, value: 0, collected: 0, outstanding: 0, hospitality: 0, comprehensive: 0, cancelled: 0, retained: 0, inquiries: 0, expenses: 0, profit: 0, general: 0 };
+    var byId = {};
+    all.forEach(function (b) { byId[b.id] = b; });
+    var cats = {};
+    (expenses || []).forEach(function (x) {
+      var amt = Number(x.amount) || 0, b = x.booking && byId[x.booking];
+      // مصروف حجز مؤكد = شهر المناسبة؛ مصروف عام (أو لحجز ملغى) = تاريخ المصروف
+      var ymd = b && b.status !== STATUS.CANCELLED && b.date ? b.date : x.date;
+      if (!ymd || String(ymd).slice(0, 4) !== year) return;
+      var r = months[Number(String(ymd).slice(5, 7)) - 1];
+      r.expenses = round3(r.expenses + amt);
+      if (!b || b.status === STATUS.CANCELLED) tot.general = round3(tot.general + amt);
+      var c = x.category || 'أخرى'; cats[c] = round3((cats[c] || 0) + amt);
+    });
     var methods = {};
     all.forEach(function (b) {
       if (String(b.created || '').slice(0, 4) === year) tot.inquiries++;
@@ -502,11 +515,67 @@ var TibianLogic = (function () {
       methods[k] = round3((methods[k] || 0) + (Number(p.amount) || 0));
     });
     months.forEach(function (r) {
+      r.profit = round3(r.value - r.expenses);
       ['events', 'hospitality', 'comprehensive'].forEach(function (k) { tot[k] += r[k]; });
-      ['value', 'collected', 'outstanding'].forEach(function (k) { tot[k] = round3(tot[k] + r[k]); });
+      ['value', 'collected', 'outstanding', 'expenses'].forEach(function (k) { tot[k] = round3(tot[k] + r[k]); });
     });
+    tot.profit = round3(tot.value - tot.expenses);
+    tot.margin = tot.value ? Math.round(tot.profit / tot.value * 100) : 0;
     tot.avg = tot.events ? round3(tot.value / tot.events) : 0;
-    return { year: Number(year), months: months, total: tot, methods: Object.keys(methods).map(function (k) { return { method: k, amount: methods[k] }; }).sort(function (a, b) { return b.amount - a.amount; }) };
+    var sortAmt = function (a, b) { return b.amount - a.amount; };
+    return { year: Number(year), months: months, total: tot,
+      methods: Object.keys(methods).map(function (k) { return { method: k, amount: methods[k] }; }).sort(sortAmt),
+      categories: Object.keys(cats).map(function (k) { return { category: k, amount: cats[k] }; }).sort(sortAmt) };
+  }
+
+  /** ربح حجز واحد: الإجمالي − مصروفاته */
+  function bookingProfit(b, expenses) {
+    var list = (expenses || []).filter(function (x) { return x.booking === b.id; });
+    var spent = round3(list.reduce(function (a, x) { return a + (Number(x.amount) || 0); }, 0));
+    var total = Number(b.total) || 0, profit = round3(total - spent);
+    return { items: list, spent: spent, profit: profit, margin: total ? Math.round(profit / total * 100) : 0 };
+  }
+
+  /* ---------------- إحصائيات الزوار ---------------- */
+
+  var SOURCES = ['instagram', 'whatsapp', 'google', 'facebook', 'tiktok', 'snapchat', 'direct', 'other'];
+  var SOURCE_NAMES = { instagram: 'إنستغرام', whatsapp: 'واتساب', google: 'Google', facebook: 'فيسبوك', tiktok: 'تيك توك', snapchat: 'سناب شات', direct: 'مباشر / غير معروف', other: 'مواقع أخرى' };
+
+  /** من أين جاء الزائر: ?src= أو utm_source أولًا، ثم الموقع الذي جاء منه */
+  function trafficSource(referrer, srcParam, ownHost) {
+    var map = { ig: 'instagram', insta: 'instagram', instagram: 'instagram', wa: 'whatsapp', whatsapp: 'whatsapp', g: 'google', google: 'google',
+      fb: 'facebook', facebook: 'facebook', tt: 'tiktok', tiktok: 'tiktok', sc: 'snapchat', snap: 'snapchat', snapchat: 'snapchat' };
+    var p = String(srcParam || '').toLowerCase().trim();
+    if (p) return map[p] || 'other';
+    var host = '';
+    try { host = String(referrer || '').replace(/^[a-z]+:\/\//i, '').split(/[\/?#]/)[0].toLowerCase(); } catch (e) { host = ''; }
+    if (!host || (ownHost && host === String(ownHost).toLowerCase())) return 'direct';
+    if (/(^|\.)instagram\.com$/.test(host)) return 'instagram';
+    if (/(^|\.)(whatsapp\.com|wa\.me)$/.test(host)) return 'whatsapp';
+    if (/(^|\.)google\.[a-z.]+$/.test(host)) return 'google';
+    if (/(^|\.)(facebook\.com|fb\.com|fb\.me)$/.test(host)) return 'facebook';
+    if (/(^|\.)tiktok\.com$/.test(host)) return 'tiktok';
+    if (/(^|\.)snapchat\.com$/.test(host)) return 'snapchat';
+    return 'other';
+  }
+
+  /** ملخص الزيارات لفترة: المجموع، ونسبة التحويل، والمصادر، ولكل يوم */
+  function statsSummary(rows, fromYmd, toYmd) {
+    var keys = ['views', 'visitors', 'consent', 'started', 'requests', 'wa'];
+    var tot = {}, src = {}, days = [];
+    keys.forEach(function (k) { tot[k] = 0; });
+    SOURCES.forEach(function (s) { src[s] = 0; });
+    (rows || []).forEach(function (r) {
+      if (!r.date || r.date < fromYmd || r.date > toYmd) return;
+      keys.forEach(function (k) { tot[k] += Number(r[k]) || 0; });
+      SOURCES.forEach(function (s) { src[s] += Number(r['src_' + s]) || 0; });
+      days.push({ date: r.date, views: Number(r.views) || 0, visitors: Number(r.visitors) || 0, requests: Number(r.requests) || 0 });
+    });
+    days.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var base = tot.visitors || tot.views;
+    tot.conversion = base ? Math.round(tot.requests / base * 1000) / 10 : 0;
+    return { total: tot, days: days,
+      sources: SOURCES.map(function (s) { return { key: s, name: SOURCE_NAMES[s], visits: src[s] }; }).filter(function (x) { return x.visits; }).sort(function (a, b) { return b.visits - a.visits; }) };
   }
 
   return {
@@ -522,7 +591,8 @@ var TibianLogic = (function () {
     MONTHS: MONTHS, formatInvoiceNo: formatInvoiceNo, invoiceCounterKey: invoiceCounterKey, parseInvoiceSeq: parseInvoiceSeq,
     bankText: bankText, bookingVars: bookingVars, templateKey: templateKey, MONEY_MESSAGES: MONEY_MESSAGES,
     afterMessage: afterMessage, sentToday: sentToday, dashboard: dashboard, monthStats: monthStats, greetingList: greetingList,
-    marketingAllowed: marketingAllowed, messageText: messageText, calendarMonth: calendarMonth, addMonths: addMonths, financeReport: financeReport
+    marketingAllowed: marketingAllowed, messageText: messageText, calendarMonth: calendarMonth, addMonths: addMonths, financeReport: financeReport,
+    bookingProfit: bookingProfit, SOURCES: SOURCES, SOURCE_NAMES: SOURCE_NAMES, trafficSource: trafficSource, statsSummary: statsSummary
   };
 })();
 
