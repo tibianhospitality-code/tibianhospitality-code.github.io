@@ -679,6 +679,10 @@
     }
     function live() {
       var c = cur();
+      // الباقة الشاملة: عقد القران (الملكة) فقط
+      var okOcc = c.package === 'comprehensive' ? L.occasionsFor(d.occasions || [], 'comprehensive').map(function (o) { return o.ar; }) : null;
+      Array.prototype.forEach.call($('f_occ').options, function (op) { op.hidden = op.disabled = !!okOcc && okOcc.indexOf(op.value) < 0; });
+      if (okOcc && okOcc.length && okOcc.indexOf($('f_occ').value) < 0) $('f_occ').value = okOcc[0];
       $('dinWrap').classList.toggle('hidden', c.package !== 'comprehensive');
       var dt = $('f_date').value, used = dt ? L.countOnDate(S.data.bookings, dt, b && b.id) : 0, max = Number(S.data.settings.max_events_per_day || 4);
       $('capMsg').innerHTML = dt ? (used >= max ? '<span style="color:var(--danger)">⚠️ مكتمل: ' + used + ' من ' + max + '</span>' : '<span style="color:var(--ok)">متاح (' + used + ' من ' + max + ')</span>') : '';

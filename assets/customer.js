@@ -53,7 +53,7 @@
       openWa: 'فتح واتساب', altH: 'إذا لم يفتح واتساب:', altLink: 'رابط بديل', waWeb: 'واتساب ويب', waDesk: 'تطبيق الكمبيوتر',
       copy: 'نسخ الرسالة', copied: 'تم نسخ الرسالة. الصقها في واتساب وأرسلها لنا.', manual: 'أو أرسل الرسالة يدويًا إلى:',
       preview: 'عرض نص الرسالة', edit: 'تعديل الطلب',
-      s1: 'المناسبة والباقة', pkgL: 'الباقة', pkgNote: 'الباقة الشاملة لعقود القران (الملكة) داخل مسقط فقط. لهذا النوع من المناسبات اختر باقة الضيافة.', clock: 'الساعة', fClock: 'الساعة',
+      s1: 'الباقة والمناسبة', pkgL: 'الباقة', pkgNote: 'الباقة الشاملة لعقود القران (الملكة) فقط، داخل مسقط. لباقي المناسبات اختر باقة الضيافة.', clock: 'الساعة', fClock: 'الساعة',
       loc: 'اسم المكان والحي', locOther: 'اكتب المنطقة واسم المكان', locPh: 'مثال: مجلس الخوض العام، أو بيت في المعبيلة', mapL: 'رابط الموقع في خرائط Google (اختياري)', geo: 'موقعي الحالي', geoBusy: 'جارٍ التحديد…', geoOk: 'تم تحديد موقعك ✓', geoFail: 'تعذر تحديد الموقع. اسمح للمتصفح بالوصول للموقع، أو الصق الرابط من خرائط Google.', mapHint: 'إن كنت في مكان المناسبة اضغط «موقعي الحالي»، أو الصق الرابط من خرائط Google.',
       addL: 'خدمات إضافية تريدها (اختياري)', extras: 'تفاصيل الخدمات الإضافية (اختياري)', extrasPh: 'مثل: عدد فخارات الحلوى، نوع التصوير، عدد أشخاص العشاء…',
       talkT: 'تفضّل التحدث معنا مباشرة؟', callUs: 'اتصل بنا', waUs: 'راسلنا واتساب', waHello: 'السلام عليكم، أرغب بالاستفسار عن خدمات تبيان للضيافة',
@@ -121,7 +121,7 @@
       openWa: 'Open WhatsApp', altH: 'If WhatsApp does not open:', altLink: 'Alternative link', waWeb: 'WhatsApp Web', waDesk: 'Desktop app',
       copy: 'Copy message', copied: 'Message copied. Paste it in WhatsApp and send it to us.', manual: 'Or send it manually to:',
       preview: 'Show message text', edit: 'Edit request',
-      s1: 'Occasion & package', pkgL: 'Package', pkgNote: 'The Comprehensive Package is for wedding contracts (Milka) in Muscat only. For this occasion choose the Hospitality Package.', clock: 'Time', fClock: 'time',
+      s1: 'Package & occasion', pkgL: 'Package', pkgNote: 'The Comprehensive Package is for wedding contracts (Milka) only, within Muscat. For other occasions choose the Hospitality Package.', clock: 'Time', fClock: 'time',
       loc: 'Place name and area', locOther: 'Write the area and place name', locPh: 'e.g. Al Khoudh community hall, or a house in Mabela', mapL: 'Google Maps link (optional)', geo: 'My location', geoBusy: 'Locating…', geoOk: 'Location added ✓', geoFail: 'Could not get your location. Allow location access or paste a Google Maps link.', mapHint: 'If you are at the venue tap “My location”, or paste the link from Google Maps.',
       addL: 'Extra services (optional)', extras: 'Details of extra services (optional)', extrasPh: 'e.g. number of sweet jars, type of photography, dinner headcount…',
       talkT: 'Prefer to talk to us directly?', callUs: 'Call us', waUs: 'WhatsApp us', waHello: 'Hello, I would like to ask about Tibian Hospitality services',
@@ -204,8 +204,9 @@
   /** أنواع المناسبات المتاحة للباقة المختارة (الشاملة: عقد القران فقط) */
   function renderOccasions(prevOcc) {
     var en = state.lang === 'en', p = pkg();
-    var list = state.cfg.occasions || [];
+    var list = p === 'comprehensive' ? L.occasionsFor(state.cfg.occasions || [], 'comprehensive') : (state.cfg.occasions || []);
     if (prevOcc && !list.some(function (o) { return o.ar === prevOcc; })) prevOcc = '';
+    if (!prevOcc && list.length === 1) prevOcc = list[0].ar;
     $('occasion').innerHTML = list.map(function (o) {
       return '<label><input type="radio" name="occasion" value="' + esc(o.ar) + '"' + (prevOcc === o.ar ? ' checked' : '') + '><span>' + esc(en ? (o.en || o.ar) : o.ar) + '</span></label>';
     }).join('');
@@ -214,13 +215,10 @@
   }
   function occRow() { var v = val('occasion'); return (state.cfg.occasions || []).filter(function (o) { return o.ar === v; })[0] || null; }
   function timeRow() { var v = val('time'); return ((state.cfg && state.cfg.times) || []).filter(function (t) { return t.ar === v; })[0] || null; }
-  /** الشاملة لأنواع المناسبات المسموحة فقط؛ ونوع «عرض سعر خاص» يظهر له تنبيه */
+  /** الشاملة: ملكة فقط (القائمة نفسها تُفلتر)؛ ونوع «عرض سعر خاص» يظهر له تنبيه */
   function pkgAvail() {
-    var o = occRow(), ok = !o || L.occasionAllowed(o, 'comprehensive');
-    var rc = document.querySelector('input[name="package"][value="comprehensive"]');
-    rc.disabled = !ok; rc.closest('.seg__opt').classList.toggle('off', !ok);
-    if (!ok && rc.checked) { document.querySelector('input[name="package"][value="hospitality"]').checked = true; renderAreas($('area').value); }
-    $('pkgNote').classList.toggle('hidden', ok);
+    var o = occRow();
+    $('pkgNote').classList.toggle('hidden', pkg() !== 'comprehensive');
     var sp = !!(o && /خاص/.test(String(o.pricing || '')));
     $('occNote').textContent = sp ? tr('specialOccP') : ''; $('occNote').classList.toggle('hidden', !sp); $('occNote').classList.add('occ-note');
     extrasMode();
@@ -544,7 +542,7 @@
     var d = store(DRAFT_KEY);
     if (!d || !d.at || Date.now() - d.at > 30 * 864e5) return;
     var setR = function (name, v) { var r = v && document.querySelector('input[name="' + name + '"][value="' + String(v).replace(/"/g, '') + '"]'); if (r && !r.disabled) r.checked = true; };
-    setR('occasion', d.occasion); pkgAvail(); setR('package', d.package); pkgAvail(); renderAreas(d.area); locLabel();
+    setR('package', d.package); renderOccasions(d.occasion); renderAreas(d.area); locLabel();
     setR('time', d.time); clockToggle();
     ['guests', 'date', 'clock', 'location', 'mapUrl', 'name', 'phone', 'extras', 'notes'].forEach(function (k) { if (d[k] && $(k)) $(k).value = d[k]; });
     (d.addons || []).forEach(function (a) { setR('addon', a); });
@@ -737,7 +735,7 @@
     $('consent').addEventListener('change', function () { if (this.checked) $('consentErr').classList.add('hidden'); });
     $('consentShow').addEventListener('click', function () { $('consentCard').classList.remove('hidden'); $('consent').checked = true; $('consentDone').classList.add('hidden'); });
     $('form').addEventListener('change', function (e) {
-      if (e.target.name === 'package') { pkgAvail(); renderAreas($('area').value); locLabel(); codeStatus(); }
+      if (e.target.name === 'package') { renderOccasions(val('occasion')); renderAreas($('area').value); locLabel(); codeStatus(); }
       if (e.target.name === 'occasion') { pkgAvail(); calc(); }
       if (e.target.name === 'time') clockToggle();
       if (e.target.id === 'clock') markInvalid('clockWrap', false);
@@ -752,15 +750,7 @@
     document.querySelectorAll('[data-pick]').forEach(function (b) {
       b.addEventListener('click', function () {
         var r = document.querySelector('input[name="package"][value="' + b.getAttribute('data-pick') + '"]');
-        if (r.value === 'comprehensive') {
-          var o = occRow();
-          if (!o || !L.occasionAllowed(o, 'comprehensive')) {
-            var first = (state.cfg.occasions || []).filter(function (x) { return L.occasionAllowed(x, 'comprehensive'); })[0];
-            var ro = first && document.querySelector('input[name="occasion"][value="' + first.ar.replace(/"/g, '') + '"]');
-            if (ro) ro.checked = true;
-          }
-        }
-        pkgAvail(); r.checked = !r.disabled; pkgAvail(); renderAreas($('area').value); locLabel(); calc(); saveDraft();
+        r.checked = true; renderOccasions(val('occasion')); renderAreas($('area').value); locLabel(); calc(); saveDraft();
         $('calc').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
