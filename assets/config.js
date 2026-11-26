@@ -32,10 +32,10 @@ window.TIBIAN = {
     ],
     occasions: [
       { ar: 'عقد قران / ملكة', en: 'Wedding contract (Milka)', packages: 'الكل', pricing: 'جدول الأسعار' },
-      { ar: 'مناسبة خاصة في منزل أو مزرعة', en: 'Private event at a home or farm', packages: 'الضيافة', pricing: 'جدول الأسعار' },
+      { ar: 'مناسبة خاصة في منزل أو مزرعة', en: 'Private event at a home or farm', packages: 'الضيافة', pricing: 'عرض سعر خاص' },
       { ar: 'حفل لمؤسسة أو شركة', en: 'Company or organization event', packages: 'الضيافة', pricing: 'عرض سعر خاص' },
       { ar: 'افتتاح مشروع', en: 'Business opening', packages: 'الضيافة', pricing: 'عرض سعر خاص' },
-      { ar: 'عزاء', en: 'Condolence', packages: 'الضيافة', pricing: 'جدول الأسعار' },
+      { ar: 'عزاء', en: 'Condolence', packages: 'الضيافة', pricing: 'عرض سعر خاص' },
       { ar: 'أخرى', en: 'Other', packages: 'الضيافة', pricing: 'عرض سعر خاص' }
     ],
     times: [
