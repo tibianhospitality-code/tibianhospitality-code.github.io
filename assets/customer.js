@@ -53,6 +53,11 @@
       openWa: 'فتح واتساب', altH: 'إذا لم يفتح واتساب:', altLink: 'رابط بديل', waWeb: 'واتساب ويب', waDesk: 'تطبيق الكمبيوتر',
       copy: 'نسخ الرسالة', copied: 'تم نسخ الرسالة. الصقها في واتساب وأرسلها لنا.', manual: 'أو أرسل الرسالة يدويًا إلى:',
       preview: 'عرض نص الرسالة', edit: 'تعديل الطلب',
+      s1: 'المناسبة والباقة', pkgL: 'الباقة', pkgNote: 'الباقة الشاملة لعقود القران (الملكة) داخل مسقط فقط. لهذا النوع من المناسبات اختر باقة الضيافة.', clock: 'الساعة', fClock: 'الساعة',
+      loc: 'اسم المكان والحي', locOther: 'اكتب المنطقة واسم المكان', locPh: 'مثال: مجلس الخوض العام، أو بيت في المعبيلة', mapL: 'رابط الموقع في خرائط Google (اختياري)', geo: 'موقعي الحالي', geoBusy: 'جارٍ التحديد…', geoOk: 'تم تحديد موقعك ✓', geoFail: 'تعذر تحديد الموقع. اسمح للمتصفح بالوصول للموقع، أو الصق الرابط من خرائط Google.', mapHint: 'إن كنت في مكان المناسبة اضغط «موقعي الحالي»، أو الصق الرابط من خرائط Google.',
+      addL: 'خدمات إضافية تريدها (اختياري)', extras: 'تفاصيل الخدمات الإضافية (اختياري)', extrasPh: 'مثل: عدد فخارات الحلوى، نوع التصوير، عدد أشخاص العشاء…',
+      talkT: 'تفضّل التحدث معنا مباشرة؟', callUs: 'اتصل بنا', waUs: 'راسلنا واتساب', waHello: 'السلام عليكم، أرغب بالاستفسار عن خدمات تبيان للضيافة',
+      specialOcc: 'عرض سعر خاص', specialOccP: 'هذا النوع من المناسبات نسعّره حسب تفاصيله. أرسل طلبك وسنرسل لك عرض سعر مفصّل توافق عليه بضغطة.', trackT: 'تابع طلبك وعرض السعر من هنا', draftBack: 'أكملنا لك ما كتبته سابقًا ✓',
       codeQ: 'عندك كود خصم؟', codePh: 'اكتب الكود', codeApply: 'تطبيق', codeOk: 'تم تطبيق الكود', codeBad: 'الكود غير صحيح أو انتهت صلاحيته', codePkg: 'هذا الكود لا ينطبق على هذه الباقة', codeUsed: 'هذا الكود استُخدم بالحد الأقصى', codeRemove: 'إزالة', discount: 'الخصم',
       cbH: 'تفضّل أن نتصل بك؟', cbP: 'اترك اسمك ورقمك، ونتصل بك لنساعدك في اختيار الباقة المناسبة.', cbOpen: 'اطلب اتصالًا', cbWhen: 'الوقت المناسب للاتصال', cbAny: 'أي وقت', cbMorning: 'صباحًا', cbNoon: 'بعد الظهر', cbEvening: 'مساءً', cbSend: 'اطلب الاتصال', cbSending: 'جارٍ الإرسال…', cbDone: 'وصلنا طلبك ✓ سنتصل بك قريبًا إن شاء الله.', cbNeedName: 'اكتب اسمك', cbConsentErr: 'ضع علامة الموافقة على التواصل',
       revTitle: 'آراء عملائنا', revSub: 'كلمات نعتز بها من أصحاب المناسبات', revMore: 'كل التقييمات على Google',
@@ -116,6 +121,11 @@
       openWa: 'Open WhatsApp', altH: 'If WhatsApp does not open:', altLink: 'Alternative link', waWeb: 'WhatsApp Web', waDesk: 'Desktop app',
       copy: 'Copy message', copied: 'Message copied. Paste it in WhatsApp and send it to us.', manual: 'Or send it manually to:',
       preview: 'Show message text', edit: 'Edit request',
+      s1: 'Occasion & package', pkgL: 'Package', pkgNote: 'The Comprehensive Package is for wedding contracts (Milka) in Muscat only. For this occasion choose the Hospitality Package.', clock: 'Time', fClock: 'time',
+      loc: 'Place name and area', locOther: 'Write the area and place name', locPh: 'e.g. Al Khoudh community hall, or a house in Mabela', mapL: 'Google Maps link (optional)', geo: 'My location', geoBusy: 'Locating…', geoOk: 'Location added ✓', geoFail: 'Could not get your location. Allow location access or paste a Google Maps link.', mapHint: 'If you are at the venue tap “My location”, or paste the link from Google Maps.',
+      addL: 'Extra services (optional)', extras: 'Details of extra services (optional)', extrasPh: 'e.g. number of sweet jars, type of photography, dinner headcount…',
+      talkT: 'Prefer to talk to us directly?', callUs: 'Call us', waUs: 'WhatsApp us', waHello: 'Hello, I would like to ask about Tibian Hospitality services',
+      specialOcc: 'Custom quote', specialOccP: 'We price this type of occasion based on its details. Send your request and we will send you a detailed quote you can accept in one tap.', trackT: 'Track your request and quote here', draftBack: 'We restored what you typed earlier ✓',
       codeQ: 'Have a discount code?', codePh: 'Enter code', codeApply: 'Apply', codeOk: 'Code applied', codeBad: 'This code is not valid or has expired', codePkg: 'This code does not apply to this package', codeUsed: 'This code has reached its usage limit', codeRemove: 'Remove', discount: 'Discount',
       cbH: 'Prefer a call?', cbP: 'Leave your name and number and we will call you to help choose the right package.', cbOpen: 'Request a call', cbWhen: 'Best time to call', cbAny: 'Any time', cbMorning: 'Morning', cbNoon: 'Afternoon', cbEvening: 'Evening', cbSend: 'Request the call', cbSending: 'Sending…', cbDone: 'Got it ✓ We will call you soon.', cbNeedName: 'Please enter your name', cbConsentErr: 'Please tick the contact consent',
       revTitle: 'What our clients say', revSub: 'Words we are proud of', revMore: 'All reviews on Google',
@@ -194,14 +204,38 @@
   /** أنواع المناسبات المتاحة للباقة المختارة (الشاملة: عقد القران فقط) */
   function renderOccasions(prevOcc) {
     var en = state.lang === 'en', p = pkg();
-    var list = L.occasionsFor(state.cfg.occasions || [], p);
+    var list = state.cfg.occasions || [];
     if (prevOcc && !list.some(function (o) { return o.ar === prevOcc; })) prevOcc = '';
-    if (!prevOcc && list.length === 1) prevOcc = list[0].ar;
     $('occasion').innerHTML = list.map(function (o) {
       return '<label><input type="radio" name="occasion" value="' + esc(o.ar) + '"' + (prevOcc === o.ar ? ' checked' : '') + '><span>' + esc(en ? (o.en || o.ar) : o.ar) + '</span></label>';
     }).join('');
     $('occasion').classList.toggle('chips--grid', list.length > 1);
+    pkgAvail();
   }
+  function occRow() { var v = val('occasion'); return (state.cfg.occasions || []).filter(function (o) { return o.ar === v; })[0] || null; }
+  function timeRow() { var v = val('time'); return ((state.cfg && state.cfg.times) || []).filter(function (t) { return t.ar === v; })[0] || null; }
+  /** الشاملة لأنواع المناسبات المسموحة فقط؛ ونوع «عرض سعر خاص» يظهر له تنبيه */
+  function pkgAvail() {
+    var o = occRow(), ok = !o || L.occasionAllowed(o, 'comprehensive');
+    var rc = document.querySelector('input[name="package"][value="comprehensive"]');
+    rc.disabled = !ok; rc.closest('.seg__opt').classList.toggle('off', !ok);
+    if (!ok && rc.checked) { document.querySelector('input[name="package"][value="hospitality"]').checked = true; renderAreas($('area').value); }
+    $('pkgNote').classList.toggle('hidden', ok);
+    var sp = !!(o && /خاص/.test(String(o.pricing || '')));
+    $('occNote').textContent = sp ? tr('specialOccP') : ''; $('occNote').classList.toggle('hidden', !sp); $('occNote').classList.add('occ-note');
+    extrasMode();
+  }
+  /** الخدمات الإضافية لباقة الضيافة فقط؛ الشاملة: ملاحظات فقط */
+  function extrasMode() {
+    var hosp = pkg() !== 'comprehensive', en = state.lang === 'en';
+    var list = ((state.cfg && state.cfg.addons) || []).filter(function (a) { return a.packages === 'الكل' || a.packages === (hosp ? 'الضيافة' : 'الشاملة'); });
+    var checked = Array.prototype.map.call(document.querySelectorAll('input[name="addon"]:checked'), function (x) { return x.value; });
+    $('addons').innerHTML = list.map(function (a) { return '<label><input type="checkbox" name="addon" value="' + esc(a.ar) + '"' + (checked.indexOf(a.ar) >= 0 ? ' checked' : '') + '><span>' + esc(en ? (a.en || a.ar) : a.ar) + '</span></label>'; }).join('');
+    $('addonsWrap').classList.toggle('hidden', !hosp || !list.length);
+    $('extrasWrap').classList.toggle('hidden', !hosp);
+  }
+  function clockToggle() { var t = timeRow(); $('clockWrap').classList.toggle('hidden', !(t && t.clock)); }
+  function locLabel() { $('locL').textContent = tr($('area').value === '__other' ? 'locOther' : 'loc'); }
   /** المناطق المتاحة: الشاملة داخل مسقط فقط */
   function renderAreas(prevArea) {
     var p = pkg(), allowed = state.cfg.comprehensiveAreas || ['مسقط'];
@@ -252,7 +286,9 @@
     $('time').innerHTML = (c.times || []).map(function (o) {
       return '<label><input type="radio" name="time" value="' + esc(o.ar) + '"' + (prev.time === o.ar ? ' checked' : '') + '><span>' + esc(en ? (o.en || o.ar) : o.ar) + '</span></label>';
     }).join('');
+    clockToggle();
     renderAreas(prev.area);
+    locLabel();
     var din = prev.dinner || L.DINNER[0].ar;
     $('dinner').innerHTML = L.DINNER.map(function (d) {
       return '<label><input type="radio" name="dinner" value="' + esc(d.ar) + '"' + (din === d.ar ? ' checked' : '') + '><span>' + esc(en ? d.en : d.ar) + '</span></label>';
@@ -261,6 +297,9 @@
     var wa = c.whatsapp || '96874190947';
     var pretty = '+' + wa.slice(0, 3) + ' ' + wa.slice(3, 7) + ' ' + wa.slice(7);
     $('bizPhone').textContent = pretty; $('bizPhone').href = 'tel:+' + wa;
+    var ph = c.phone || wa;
+    $('callTop').href = 'tel:+' + ph; $('phoneTop').textContent = '+' + ph.slice(0, 3) + ' ' + ph.slice(3, 7) + ' ' + ph.slice(7);
+    var hl = L.waLinks(wa, tr('waHello')); $('waTop').href = state.mobile ? hl.app : hl.api; $('waTop').target = state.mobile ? '_self' : '_blank';
     $('ftWa').href = 'https://api.whatsapp.com/send?phone=' + wa; $('ftWa').querySelector('span').textContent = pretty;
     if (c.instagram) ['igTop', 'ftIg', 'igMore'].forEach(function (id) { $(id).href = c.instagram; });
     if (c.email) { $('ftMail').href = 'mailto:' + c.email; $('ftMail').textContent = c.email; }
@@ -274,6 +313,7 @@
     var cached = store(CFG_KEY);
     state.cfg = cached && cached.tiers ? cached : SITE.fallback;
     renderConfig(false);
+    restoreDraft();
     API.get('config').then(function (cfg) {
       if (!cfg || !cfg.tiers) return;
       state.cfg = cfg; store(CFG_KEY, cfg); renderConfig(true);
@@ -295,7 +335,8 @@
     var q = priceQuote(c, p, g, area);
     state.last = q;
     if (q.special) {
-      box.innerHTML = '<p class="price__label">' + esc(L.PKG[p][en ? 'en' : 'ar']) + '</p><p class="price__special">' + esc(tr('special')) + '</p><p class="price__note">' + esc(tr('specialP')) + '</p>';
+      var occSp = q.reason === 'occasion';
+      box.innerHTML = '<p class="price__label">' + esc(L.PKG[p][en ? 'en' : 'ar']) + '</p><p class="price__special">' + esc(tr(occSp ? 'specialOcc' : 'special')) + '</p><p class="price__note">' + esc(tr(occSp ? 'specialOccP' : 'specialP')) + '</p>';
     } else {
       var due = $('date').value ? (en ? L.enDate : L.arDate)(L.balanceDueDate($('date').value, c.balanceDays)) : '';
       box.innerHTML =
@@ -348,10 +389,12 @@
   /* ---------------- التحقق والإرسال ---------------- */
   function collect() {
     return {
-      package: pkg(), occasion: val('occasion'), guests: guests(), date: $('date').value, time: val('time'),
+      package: pkg(), occasion: val('occasion'), guests: guests(), date: $('date').value,
+      time: (timeRow() && timeRow().clock && $('clock').value) ? L.clockLabel(val('time'), $('clock').value) : val('time'),
+      mapUrl: $('mapUrl').value.trim(), addons: pkg() === 'comprehensive' ? [] : Array.prototype.map.call(document.querySelectorAll('input[name="addon"]:checked'), function (x) { return x.value; }),
       area: $('area').value, location: $('location').value.trim(), dinner: pkg() === 'comprehensive' ? val('dinner') : '',
       name: $('name').value.trim(), phone: digits($('phone').value), notes: $('notes').value.trim(), website: $('website').value,
-      extras: $('extras').value.trim(), consent: !!state.consent, marketing: !!state.marketing, lang: state.lang, src: sessionSrc(), code: state.code ? state.code.code : ''
+      extras: pkg() === 'comprehensive' ? '' : $('extras').value.trim(), consent: !!state.consent, marketing: !!state.marketing, lang: state.lang, src: sessionSrc(), code: state.code ? state.code.code : ''
     };
   }
   function markInvalid(fieldId, on) { var f = $(fieldId); if (f) f.classList.toggle('invalid', on); }
@@ -364,6 +407,7 @@
     need(!!f.date && f.date >= muscatToday(), 'fDate', $('date'), 'f-date');
     need(!!f.time, 'fTime', $('time'), null);
     $('time').parentNode.classList.toggle('invalid', !f.time);
+    var tr0 = timeRow(); if (tr0 && tr0.clock) need(!!$('clock').value, 'fClock', $('clock'), 'clockWrap');
     need(!!f.name, 'fName', $('name'), 'f-name');
     need(L.validPhone(f.phone), 'fPhone', $('phone'), 'f-phone');
     return { ok: !miss.length, msg: tr('fill') + miss.join(state.lang === 'en' ? ', ' : '، '), first: first };
@@ -382,7 +426,8 @@
     var btn = $('sendBtn'); btn.disabled = true; btn.querySelector('span').textContent = tr('sending');
     f.ref = 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     API.post({ action: 'inquiry', data: f }).then(function (r) {
-      showDone(r.id, r.text, r.whatsapp, false);
+      showDone(r.id, r.text, r.whatsapp, false, r.quoteUrl);
+      store(DRAFT_KEY, null);
     }).catch(function (e) {
       if (e.code === 'phone') { err.textContent = tr('badPhone'); err.classList.remove('hidden'); markInvalid('f-phone', true); $('phone').focus(); return; }
       if (e.code === 'rate') { err.textContent = tr('tooMany'); err.classList.remove('hidden'); return; }
@@ -392,7 +437,8 @@
       if (e.code === 'pkg_occasion' || e.code === 'pkg_area') { err.textContent = tr(e.code === 'pkg_area' ? 'pkgAreaErr' : 'pkgOccErr'); err.classList.remove('hidden'); renderOccasions(val('occasion')); renderAreas($('area').value); return; }
       // مشكلة اتصال: نجهز الرسالة محليًا ونحفظ الطلب لإعادة المحاولة
       var c = state.cfg, q = priceQuote(c, f.package, f.guests, f.area);
-      var text = L.requestMessage(q.special ? c.templates.special_request : c.templates.customer_request, f, q, '—');
+      var fx = Object.assign({}, f, { extras: [(f.addons || []).join('، '), f.extras].filter(Boolean).join('\n') });
+      var text = L.requestMessage(q.special ? c.templates.special_request : c.templates.customer_request, fx, q, '—');
       var pending = store(PENDING_KEY) || []; pending.push(f); store(PENDING_KEY, pending.slice(-5));
       API.beacon({ action: 'inquiry', data: f });
       showDone('', text, c.whatsapp, true);
@@ -412,7 +458,7 @@
     });
   }
 
-  function showDone(id, text, wa, offline) {
+  function showDone(id, text, wa, offline, quoteUrl) {
     wa = wa || state.cfg.whatsapp;
     var links = L.waLinks(wa, text);
     var primary = L.primaryWaLink(links, state.mobile);
@@ -427,6 +473,9 @@
     $('doneTitle').textContent = offline ? tr('openWa') : tr('doneT');
     $('doneRef').textContent = id ? tr('ref') + id : '';
     $('doneRef').classList.toggle('hidden', !id);
+    var tl = $('trackLink');
+    if (!tl) { tl = document.createElement('a'); tl.id = 'trackLink'; tl.className = 'done__track'; tl.target = '_blank'; tl.rel = 'noopener'; $('doneRef').insertAdjacentElement('afterend', tl); }
+    tl.textContent = tr('trackT'); tl.href = quoteUrl || '#'; tl.classList.toggle('hidden', !quoteUrl);
     var p = $('doneP');
     p.textContent = offline ? tr('doneOffline') : tr('doneP');
     p.className = offline ? 'done__warn' : 'done__p';
@@ -482,9 +531,30 @@
     });
   }
 
+  /* ---------------- حفظ ما كتبه العميل (يكمل لاحقًا من نفس المكان) ---------------- */
+  var DRAFT_KEY = 'tibian_draft_v1', restored = false;
+  function saveDraft() {
+    if (!state.cfg || $('form').classList.contains('hidden')) return;
+    store(DRAFT_KEY, { at: Date.now(), package: pkg(), occasion: val('occasion'), guests: $('guests').value, date: $('date').value, time: val('time'), clock: $('clock').value,
+      area: $('area').value, location: $('location').value, mapUrl: $('mapUrl').value, name: $('name').value, phone: $('phone').value,
+      addons: Array.prototype.map.call(document.querySelectorAll('input[name="addon"]:checked'), function (x) { return x.value; }), extras: $('extras').value, notes: $('notes').value });
+  }
+  function restoreDraft() {
+    if (restored) return; restored = true;
+    var d = store(DRAFT_KEY);
+    if (!d || !d.at || Date.now() - d.at > 30 * 864e5) return;
+    var setR = function (name, v) { var r = v && document.querySelector('input[name="' + name + '"][value="' + String(v).replace(/"/g, '') + '"]'); if (r && !r.disabled) r.checked = true; };
+    setR('occasion', d.occasion); pkgAvail(); setR('package', d.package); pkgAvail(); renderAreas(d.area); locLabel();
+    setR('time', d.time); clockToggle();
+    ['guests', 'date', 'clock', 'location', 'mapUrl', 'name', 'phone', 'extras', 'notes'].forEach(function (k) { if (d[k] && $(k)) $(k).value = d[k]; });
+    (d.addons || []).forEach(function (a) { setR('addon', a); });
+    calc(); checkDate();
+    if (d.name || d.guests || d.occasion) toast(tr('draftBack'));
+  }
+
   /* ---------------- كود الخصم ---------------- */
   function priceQuote(c, p, g, area) {
-    var q = L.quote(c, p, g, area);
+    var q = L.quote(c, p, g, area, occRow());
     if (!state.code || q.special) return q;
     var d = L.codeDiscount({ active: true, type: state.code.type, value: state.code.value, package: state.code.package }, p, q.price, muscatToday(), 0);
     return d.ok ? L.applyDiscount(q, d.discount, c.deposit) : q;
@@ -667,7 +737,11 @@
     $('consent').addEventListener('change', function () { if (this.checked) $('consentErr').classList.add('hidden'); });
     $('consentShow').addEventListener('click', function () { $('consentCard').classList.remove('hidden'); $('consent').checked = true; $('consentDone').classList.add('hidden'); });
     $('form').addEventListener('change', function (e) {
-      if (e.target.name === 'package') { renderOccasions(val('occasion')); renderAreas($('area').value); codeStatus(); }
+      if (e.target.name === 'package') { pkgAvail(); renderAreas($('area').value); locLabel(); codeStatus(); }
+      if (e.target.name === 'occasion') { pkgAvail(); calc(); }
+      if (e.target.name === 'time') clockToggle();
+      if (e.target.id === 'clock') markInvalid('clockWrap', false);
+      if (e.target.id === 'area') locLabel();
       if (e.target.name === 'package' || e.target.id === 'area') calc();
       if (e.target.id === 'date') { checkDate(); calc(); markInvalid('f-date', false); }
       if (e.target.name === 'occasion' || e.target.name === 'time') e.target.closest('.field').classList.remove('invalid');
@@ -678,10 +752,30 @@
     document.querySelectorAll('[data-pick]').forEach(function (b) {
       b.addEventListener('click', function () {
         var r = document.querySelector('input[name="package"][value="' + b.getAttribute('data-pick') + '"]');
-        r.checked = true; renderOccasions(val('occasion')); renderAreas($('area').value); calc();
+        if (r.value === 'comprehensive') {
+          var o = occRow();
+          if (!o || !L.occasionAllowed(o, 'comprehensive')) {
+            var first = (state.cfg.occasions || []).filter(function (x) { return L.occasionAllowed(x, 'comprehensive'); })[0];
+            var ro = first && document.querySelector('input[name="occasion"][value="' + first.ar.replace(/"/g, '') + '"]');
+            if (ro) ro.checked = true;
+          }
+        }
+        pkgAvail(); r.checked = !r.disabled; pkgAvail(); renderAreas($('area').value); locLabel(); calc(); saveDraft();
         $('calc').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
+    $('geoBtn').addEventListener('click', function () {
+      var b = this, hint = $('mapHint');
+      if (!navigator.geolocation) { hint.textContent = tr('geoFail'); return; }
+      b.disabled = true; hint.textContent = tr('geoBusy'); hint.className = 'field__hint';
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        $('mapUrl').value = 'https://maps.google.com/?q=' + pos.coords.latitude.toFixed(6) + ',' + pos.coords.longitude.toFixed(6);
+        hint.textContent = tr('geoOk'); hint.className = 'field__hint map-ok'; b.disabled = false; saveDraft();
+      }, function () { hint.textContent = tr('geoFail'); b.disabled = false; }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+    });
+    var dt;
+    $('form').addEventListener('input', function () { clearTimeout(dt); dt = setTimeout(saveDraft, 400); });
+    $('form').addEventListener('change', function () { clearTimeout(dt); dt = setTimeout(saveDraft, 200); });
     $('stickyBtn').addEventListener('click', function () { submit(); });
     $('copyBtn').addEventListener('click', copyMsg);
     $('editBtn').addEventListener('click', function () { $('done').classList.add('hidden'); $('form').classList.remove('hidden'); updateSticky(); $('calc').scrollIntoView({ behavior: 'smooth' }); });

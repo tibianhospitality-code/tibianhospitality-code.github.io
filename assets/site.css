@@ -346,3 +346,22 @@ html[dir="rtl"] .rv-stars { justify-content: flex-end; }
 .rv-stars button:focus-visible { outline: 3px solid var(--gold-2); }
 .rv-form #rvSend { margin-top: 14px; }
 .rv-done { color: var(--ok); font-weight: 600; margin: 10px 0 0; }
+
+/* تواصل مباشر أعلى الصفحة */
+.hero__contact { margin-top: 18px; display: grid; gap: 8px; justify-items: center; }
+.hero__contact-t { margin: 0; color: #CFC8BA; font-size: 14px; }
+.hero__contact-b { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.hero__contact-b .btn { min-height: 44px; padding: 10px 18px; font-size: 15px; }
+.hero__contact-b .ico { width: 18px; height: 18px; }
+.hero__phone { margin: 0; color: var(--gold); font-weight: 600; letter-spacing: .5px; font-variant-numeric: tabular-nums; }
+/* الخرائط */
+.map-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.map-row .btn { min-height: 46px; padding: 8px 12px; white-space: nowrap; font-size: 14px; }
+.map-ok { color: var(--ok); font-weight: 600; }
+/* الخدمات الإضافية: اختيار متعدد */
+#addons label input { position: absolute; opacity: 0; }
+.chips input[type="checkbox"]:checked + span::before { content: "✓ "; }
+.seg__opt.off { opacity: .45; }
+.seg__opt.off span { cursor: not-allowed; }
+.occ-note { color: var(--gold-ink, #7D6230); }
+.done__track { display: inline-block; margin: 2px 0 10px; color: var(--gold-ink, #7D6230); font-weight: 600; }

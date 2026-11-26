@@ -10,13 +10,13 @@ var TibianLogic = (function () {
   'use strict';
 
   var STATUS = {
-    NEW: 'جديد', QUOTED: 'عرض مرسل', CONFIRMED: 'مؤكد', PAID: 'مدفوع بالكامل',
+    NEW: 'جديد', QUOTED: 'عرض مرسل', ACCEPTED: 'وافق على العرض', CONFIRMED: 'مؤكد', PAID: 'مدفوع بالكامل',
     DONE: 'مكتمل', CANCELLED: 'ملغي', SPECIAL: 'باقة خاصة'
   };
   /** الحالات التي تحجز مكانًا في اليوم (تُحسب في السعة) */
   var BOOKED = [STATUS.CONFIRMED, STATUS.PAID, STATUS.DONE];
   /** الحالات المفتوحة التي تحتاج متابعة */
-  var OPEN = [STATUS.NEW, STATUS.QUOTED, STATUS.SPECIAL];
+  var OPEN = [STATUS.NEW, STATUS.QUOTED, STATUS.SPECIAL, STATUS.ACCEPTED];
 
   var PKG = {
     hospitality: { ar: 'باقة الضيافة', en: 'Hospitality Package' },
@@ -142,16 +142,22 @@ var TibianLogic = (function () {
    * cfg: { tiers, travel, deposit, minGuests, maxGuests }
    * area: اسم المنطقة من ورقة المواصلات، أو '__other' (خارج مسقط — غير مدرجة)
    */
-  function quote(cfg, pkg, guests, area) {
+  /**
+   * occ (اختياري) = سطر نوع المناسبة: pricing «عرض سعر خاص» → لا سعر تلقائي (نرسل عرضًا)،
+   * و adjust = نسبة تعديل على سعر الجدول (مثل 20 = +20%).
+   */
+  function quote(cfg, pkg, guests, area, occ) {
     guests = Math.floor(Number(guests) || 0);
     if (!PKG[pkg]) pkg = 'hospitality';
     var res = { pkg: pkg, guests: guests, special: false, travelFee: 0, travelUnknown: false };
+    if (occ && /خاص/.test(String(occ.pricing || ''))) { res.special = true; res.reason = 'occasion'; return res; }
     var min = Number(cfg.minGuests || 100), max = Number(cfg.maxGuests || 1000);
     var t = guests >= min && guests <= max ? findTier(cfg.tiers, guests) : null;
     if (!t) { res.special = true; res.reason = guests < min ? 'below' : (guests > max ? 'above' : 'gap'); return res; }
     res.tier = tierLabel(t);
     res.hosts = Number(t.hosts); res.supervisors = Number(t.supervisors); res.jars = Number(t.jars);
     res.price = Number(pkg === 'comprehensive' ? t.comprehensive : t.hospitality);
+    if (occ && Number(occ.adjust)) res.price = round3(res.price * (1 + Number(occ.adjust) / 100));
     if (area === '__other') {
       res.travelUnknown = pkg === 'hospitality';
     } else if (area) {
@@ -240,6 +246,7 @@ var TibianLogic = (function () {
     var v = requestVars(f, q, id);
     var text = fill(template, v);
     if (f.extras && String(template).indexOf('{سطر_الخدمات}') < 0 && String(template).indexOf('{الخدمات_الإضافية}') < 0) text += v['سطر_الخدمات'];
+    if (f.mapUrl) text += '\nالموقع على الخريطة: ' + f.mapUrl;
     if (q && q.discount > 0 && f.code) text += '\nكود الخصم: ' + f.code + ' (خصم ' + fmtMoney(q.discount) + ' ر.ع)';
     return text;
   }
@@ -334,6 +341,7 @@ var TibianLogic = (function () {
       'محلات_التجهيز': (ctx && ctx.shops || []).filter(function (x) { return x.active !== false; }).map(function (x) { return '🏪 ' + x.name + (x.map ? '\n📍 ' + x.map : ''); }).join('\n\n'),
       'إنستغرام': s.instagram || '',
       'رابط_التقييم': s.review_url || '',
+      'رابط_العرض': b.quoteUrl || '', 'رابط_الموقع': b.mapUrl || '',
       'رابط_رأيك': s.admin_url ? String(s.admin_url).replace(/admin\/?(#.*)?$/, '') + '?review=' + encodeURIComponent(b.id || '') + '#reviews' : ''
     };
     if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) v[k] = extra[k];
@@ -348,6 +356,8 @@ var TibianLogic = (function () {
     var text = fill(tpl, vars);
     var link = vars && vars['رابط_التقييم'];
     if (key === 'thank_you' && link && String(tpl).indexOf('{رابط_التقييم}') < 0) text += '\n\n⭐ يسعدنا تقييمكم لنا على Google:\n' + link;
+    var ql = vars && vars['رابط_العرض'];
+    if (ql && /^(quote_hospitality|quote_comprehensive|followup)$/.test(key) && String(tpl).indexOf('{رابط_العرض}') < 0) text += '\n\n📄 تفاصيل العرض، والموافقة عليه أو إلغاؤه:\n' + ql;
     var own = vars && vars['رابط_رأيك'];
     if (key === 'thank_you' && own && String(tpl).indexOf('{رابط_رأيك}') < 0) text += '\n\n✍️ أو اكتب رأيك في موقعنا:\n' + own;
     return text;
@@ -396,6 +406,7 @@ var TibianLogic = (function () {
       newInquiries: all.filter(function (b) { return b.status === STATUS.NEW || b.status === STATUS.SPECIAL; })
         .sort(function (a, c) { return a.created < c.created ? 1 : -1; }),
       followUps: all.filter(function (b) { return b.status === STATUS.QUOTED && b.nextFollowUp && b.nextFollowUp <= todayYmd; }).sort(byDate),
+      accepted: all.filter(function (b) { return b.status === STATUS.ACCEPTED; }).sort(byDate),
       balanceDue: all.filter(function (b) {
         return b.status === STATUS.CONFIRMED && Number(b.balance) > 0 && b.date >= todayYmd && balanceDueDate(b.date, balDays) <= soon;
       }).sort(byDate),
@@ -566,6 +577,51 @@ var TibianLogic = (function () {
     return r;
   }
 
+  /* ---------------- بنود الفاتورة وعرض السعر ---------------- */
+
+  /** بنود يكتبها المدير بنفسه: [{d: الوصف, q: الكمية, p: سعر الوحدة}] (نص JSON في الجدول) */
+  function parseItems(v) {
+    var a = v;
+    if (typeof v === 'string') { try { a = v ? JSON.parse(v) : []; } catch (e) { a = []; } }
+    if (!Array.isArray(a)) return [];
+    return a.map(function (x) { return { d: String((x && x.d) || '').trim(), q: Math.max(0, Number(x && x.q) || 0) || 1, p: round3(Number(x && x.p) || 0) }; })
+      .filter(function (x) { return x.d; });
+  }
+  function itemsTotal(items) { return round3(parseItems(items).reduce(function (a, x) { return a + x.q * x.p; }, 0)); }
+
+  /** الوصف التلقائي للباقة (يُستخدم إن لم يكتب المدير وصفًا) */
+  function packageDesc(b, tiers) {
+    var t = findTier(tiers, b.guests) || {};
+    return b.package === 'comprehensive'
+      ? 'تشمل: الضيافة، والعشاء' + (b.dinner ? ' (' + b.dinner + ')' : '') + '، والحلوى العُمانية، والتصوير فوتو وفيديو، وتجهيز المعرس.'
+      : 'تشمل: فريق الضيافة' + (t.hosts ? ' (' + t.hosts + ' مضيف + ' + t.supervisors + ' مشرف)' : '') + '، وتجهيز المكان، واستقبال الضيوف، وتقديم الضيافة.';
+  }
+
+  /**
+   * بنود الفاتورة/العرض: [{d, q, p, t}] — بنودك إن كتبتها، وإلا سطر الباقة التلقائي،
+   * ثم المواصلات والخصم. title = نوع الخدمة (يكتبه المدير أو اسم الباقة).
+   */
+  function lineItems(b, tiers) {
+    var pkgName = PKG[b.package] ? PKG[b.package].ar : (b.package || '');
+    var title = String(b.serviceTitle || '').trim() || pkgName;
+    var desc = String(b.serviceDesc || '').trim();
+    var own = parseItems(b.items), lines;
+    if (own.length) lines = own.map(function (x) { return { d: x.d, q: x.q, p: x.p, t: round3(x.q * x.p) }; });
+    else lines = [{ d: title + (b.tier && b.tier !== 'خاصة' && !b.serviceTitle ? ' — ' + b.tier + ' ضيف' : '') + '\n' + (desc || packageDesc(b, tiers)), q: 1, p: round3(b.price), t: round3(b.price) }];
+    if (Number(b.travelFee) > 0) lines.push({ d: 'رسوم المواصلات', q: 1, p: round3(b.travelFee), t: round3(b.travelFee) });
+    if (Number(b.discount) > 0) lines.push({ d: 'خصم' + (b.code ? ' (كود ' + b.code + ')' : ''), q: 1, p: -round3(b.discount), t: -round3(b.discount) });
+    return { title: title, desc: own.length ? desc : '', lines: lines };
+  }
+
+  /** «مساءً» + «20:30» → «مساءً · 8:30 م» */
+  function clockLabel(time, hhmm, en) {
+    var m = /^(\d{1,2}):(\d{2})/.exec(String(hhmm || ''));
+    if (!m) return time || '';
+    var h = Number(m[1]), pm = h >= 12, h12 = h % 12 || 12;
+    var c = h12 + ':' + m[2] + ' ' + (en ? (pm ? 'PM' : 'AM') : (pm ? 'م' : 'ص'));
+    return time ? time + ' · ' + c : c;
+  }
+
   /** ربح حجز واحد: الإجمالي − مصروفاته */
   function bookingProfit(b, expenses) {
     var list = (expenses || []).filter(function (x) { return x.booking === b.id; });
@@ -630,6 +686,7 @@ var TibianLogic = (function () {
     bankText: bankText, bookingVars: bookingVars, templateKey: templateKey, MONEY_MESSAGES: MONEY_MESSAGES,
     afterMessage: afterMessage, sentToday: sentToday, dashboard: dashboard, monthStats: monthStats, greetingList: greetingList,
     marketingAllowed: marketingAllowed, messageText: messageText, calendarMonth: calendarMonth, addMonths: addMonths, financeReport: financeReport,
+    parseItems: parseItems, itemsTotal: itemsTotal, packageDesc: packageDesc, lineItems: lineItems, clockLabel: clockLabel,
     normCode: normCode, codeDiscount: codeDiscount, applyDiscount: applyDiscount,
     bookingProfit: bookingProfit, SOURCES: SOURCES, SOURCE_NAMES: SOURCE_NAMES, trafficSource: trafficSource, statsSummary: statsSummary
   };

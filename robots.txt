@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin/
+Disallow: /quote.html
 
 Sitemap: https://tibianhospitality-code.github.io/sitemap.xml

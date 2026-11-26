@@ -251,3 +251,11 @@ html[dir="rtl"] .switch input:checked::after { transform: translateX(-20px); }
 .stars5 i { font-style: normal; color: var(--line); }
 .rv-text { margin: 6px 0 8px; line-height: 1.8; white-space: pre-wrap; }
 .alert-row { margin-top: 10px; border-color: var(--gold); background: #FBF4E4; text-decoration: none; color: inherit; }
+
+/* وافق على العرض */
+.s-accepted { background: #E7F6EC; color: var(--ok); }
+/* تفاصيل الخدمة والبنود */
+.svc { margin-top: 12px; border: 1px dashed var(--gold-2); border-radius: 12px; padding: 10px 12px; background: #FFFDF8; }
+.svc summary { cursor: pointer; font-weight: 600; }
+.item-row { display: grid; grid-template-columns: minmax(0, 1fr) 64px 80px auto; gap: 6px; margin-top: 6px; align-items: center; }
+.item-row .input { min-width: 0; }

@@ -44,6 +44,12 @@
 
   /* ---------- وضع تجريبي محلي ---------- */
   var mockSeq = 1005;
+  function MOCK_QUOTE(id) {
+    return { id: id, name: 'عميل تجريبي', stage: 'open', status: 'عرض مرسل', occasion: 'حفل لمؤسسة أو شركة', package: 'باقة الضيافة', title: 'ضيافة حفل شركة', desc: 'استقبال وضيافة لحفل الموظفين (مثال للعرض فقط)',
+      lines: [{ d: 'مضيفون', q: 10, p: 15, t: 150 }, { d: 'قهوة وتمر وحلوى', q: 1, p: 60, t: 60 }, { d: 'رسوم المواصلات', q: 1, p: 20, t: 20 }],
+      guests: 200, date: '2026-12-20', dateAr: 'الأحد 20/12/2026', time: 'مساءً · 7:30 م', location: 'مجمع الأعمال، الخوير', mapUrl: 'https://maps.google.com/?q=23.6,58.4',
+      total: 230, deposit: 115, depositPct: 50, paid: 0, balance: 230, balanceDue: 'الأحد 13/12/2026', terms: 'العربون 50% لتأكيد الحجز.\nالمتبقي قبل المناسبة بأسبوع.', bank: '', whatsapp: '96874190947', phone: '96874190947', invoiceNo: '', invoiceUrl: '', business: 'تبيان للضيافة' };
+  }
   function mock(action, q) {
     var L = window.TibianLogic;
     return new Promise(function (resolve, reject) {
@@ -51,6 +57,7 @@
         if (params.get('mock') === 'fail') { var e = new Error('network'); e.code = 'network'; return reject(e); }
         if (action === 'config') {
           var cfg = JSON.parse(JSON.stringify(C.fallback));
+          cfg.phone = '96874190947';
           cfg.travel = [{ name: 'مسقط', fee: 0, appliesTo: 'الكل' }, { name: 'بركاء', fee: 20, appliesTo: 'باقة الضيافة' }, { name: 'نزوى', fee: 35, appliesTo: 'باقة الضيافة' }];
           cfg.hasCodes = true;
           cfg.reviews = params.get('reviews') === '0' ? [] : [{ name: 'أم سالم', occasion: 'ملكة', when: 'أكتوبر 2026', stars: 5, ar: 'نص تجريبي للعرض فقط', en: 'Sample text for preview only' }, { name: 'م. ع.', occasion: 'افتتاح مشروع', when: 'سبتمبر 2026', stars: 4, ar: 'نص تجريبي ثانٍ للعرض فقط', en: '' }];
@@ -61,6 +68,8 @@
         }
         if (action === 'availability') return resolve({ date: q.date, used: 1, available: true });
         if (action === 'code') { var cc = L.normCode(q.code); return resolve(cc === 'HESSA5' ? { ok: true, code: cc, type: 'نسبة %', value: 5, package: 'الكل' } : cc === 'WED20' ? (q.pkg === 'comprehensive' ? { ok: true, code: cc, type: 'مبلغ ثابت', value: 20, package: 'الشاملة' } : { ok: false, reason: 'package' }) : { ok: false, reason: 'invalid' }); }
+        if (action === 'quote') { if (q.k !== 'mock') { var e8 = new Error('quote'); e8.code = 'quote'; return reject(e8); } return resolve(MOCK_QUOTE(q.id)); }
+        if (action === 'quoteRespond') { var mq = MOCK_QUOTE(q.id); mq.stage = q.decision === 'accept' ? 'accepted' : 'cancelled'; if (q.decision === 'accept') mq.bank = 'بنك مسقط\nاسم الحساب: تبيان للضيافة\nرقم الحساب: 0301…'; return resolve(mq); }
         if (action === 'review') { if (!q.data.name || !q.data.stars) { var e7 = new Error('text'); e7.code = 'text'; return reject(e7); } return resolve({ ok: true }); }
         if (action === 'callback') { if (q.data.consent !== true) { var e5 = new Error('consent'); e5.code = 'consent'; return reject(e5); } return resolve({ id: 'T' + (mockSeq++) }); }
         if (action === 'inquiry') {
@@ -72,8 +81,9 @@
           else if (f.code) { var e6 = new Error('code'); e6.code = 'code'; return reject(e6); }
           var id = 'T' + (mockSeq++);
           if (f.consent !== true) { var e3 = new Error('consent required'); e3.code = 'consent'; return reject(e3); }
+          f = Object.assign({}, f, { extras: [(f.addons || []).join('، '), f.extras].filter(Boolean).join('\n') });
           var text = L.requestMessage(qq.special ? cfg2.templates.special_request : cfg2.templates.customer_request, f, qq, id);
-          return resolve({ id: id, special: qq.special, total: qq.total || 0, deposit: qq.deposit || 0, text: text, whatsapp: cfg2.whatsapp });
+          return resolve({ id: id, quoteUrl: 'quote.html?id=' + id + '&k=mock', special: qq.special, total: qq.total || 0, deposit: qq.deposit || 0, text: text, whatsapp: cfg2.whatsapp });
         }
         if (action === 'admin' && window.TIBIAN_MOCK_ADMIN) return window.TIBIAN_MOCK_ADMIN(q).then(resolve, reject);
         reject(new Error('mock: unknown ' + action));

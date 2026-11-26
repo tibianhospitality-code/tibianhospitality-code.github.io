@@ -1,0 +1,48 @@
+/* صفحة عرض السعر */
+.q-body { background: var(--sand); min-height: 100vh; }
+.q-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--charcoal); color: #fff; }
+.q-head img { width: 44px; height: auto; }
+.q-head__brand { margin: 0; font-family: var(--f-display); font-size: 19px; font-weight: 700; color: var(--gold); }
+.q-head__sub { margin: 0; font-size: 13px; color: #CFC8BA; }
+.q-main { padding-top: 18px; padding-bottom: 32px; display: grid; gap: 14px; max-width: 720px; }
+.q-loading, .q-error { text-align: center; color: var(--grey-2); padding: 28px 16px; }
+.q-title { margin: 0; font-family: var(--f-display); font-size: 22px; }
+.q-meta { margin: 4px 0 0; color: var(--grey-2); font-size: 14px; }
+.q-banner { border-radius: var(--radius); padding: 14px 16px; font-weight: 600; line-height: 1.7; }
+.q-banner--ok { background: #E7F6EC; color: var(--ok); border: 1px solid #BFE3CB; }
+.q-banner--info { background: #FBF4E4; color: var(--gold-ink, #7D6230); border: 1px solid var(--gold); }
+.q-banner--bad { background: #FDECEA; color: var(--danger); border: 1px solid #F1B8B3; }
+.q-kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 0; font-size: 15px; }
+.q-kv dt { color: var(--grey-2); }
+.q-kv dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+.q-h { margin: 0 0 10px; font-size: 16px; font-weight: 700; }
+.q-desc { margin: 0 0 10px; color: var(--grey); line-height: 1.8; white-space: pre-line; }
+.q-lines { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.q-lines th, .q-lines td { padding: 10px 6px; border-bottom: 1px solid var(--line); text-align: start; vertical-align: top; }
+.q-lines th { font-size: 12.5px; color: var(--grey-2); font-weight: 600; }
+.q-lines td.n { white-space: nowrap; text-align: end; font-variant-numeric: tabular-nums; }
+.q-lines td .d { white-space: pre-line; }
+.q-lines td small { color: var(--grey-2); }
+.q-lines tr.neg td.n { color: var(--ok); }
+.q-tot { display: grid; gap: 6px; margin-top: 12px; }
+.q-tot div { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; }
+.q-tot .big { font-size: 20px; font-weight: 700; padding-top: 8px; border-top: 2px solid var(--charcoal); }
+.q-tot .big b { color: var(--charcoal); }
+.q-tot small { color: var(--grey-2); font-weight: 400; }
+.q-actions { display: grid; gap: 10px; }
+.q-actions .btn { width: 100%; }
+.q-cancel { display: grid; gap: 10px; }
+.q-cancel select, .q-cancel textarea { width: 100%; }
+.q-bank { white-space: pre-line; background: var(--sand); border: 1px dashed var(--gold-2); border-radius: 12px; padding: 12px; font-size: 14.5px; line-height: 1.9; }
+.q-terms summary { cursor: pointer; font-weight: 600; }
+.q-terms ul { margin: 10px 0 0; padding-inline-start: 20px; color: var(--grey); line-height: 1.8; font-size: 14px; }
+.q-foot { text-align: center; color: var(--grey-2); font-size: 13.5px; padding: 0 16px 28px; }
+.q-foot a { color: inherit; }
+.q-print { background: none; border: 0; color: var(--grey-2); text-decoration: underline; cursor: pointer; font: inherit; padding: 6px; }
+@media print {
+  .q-body { background: #fff; }
+  .q-actions, .q-print, .q-foot, .q-cancel { display: none !important; }
+  .q-head { background: #fff; color: #000; border-bottom: 2px solid #000; }
+  .q-head__brand { color: #000; }
+  .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+}

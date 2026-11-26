@@ -19,7 +19,7 @@
   function digits(s) { return String(s || '').replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; }); }
   function device() { var d = store(DKEY); if (!d) { d = 'd' + Math.random().toString(36).slice(2) + Date.now().toString(36); store(DKEY, d); } return d; }
   function statusClass(s) {
-    return { 'جديد': 's-new', 'عرض مرسل': 's-quoted', 'مؤكد': 's-confirmed', 'مدفوع بالكامل': 's-paid', 'مكتمل': 's-done', 'ملغي': 's-cancelled', 'باقة خاصة': 's-special' }[s] || 's-new';
+    return { 'جديد': 's-new', 'عرض مرسل': 's-quoted', 'وافق على العرض': 's-accepted', 'مؤكد': 's-confirmed', 'مدفوع بالكامل': 's-paid', 'مكتمل': 's-done', 'ملغي': 's-cancelled', 'باقة خاصة': 's-special' }[s] || 's-new';
   }
   function chip(s) { return '<span class="chip ' + statusClass(s) + '">' + esc(s) + '</span>'; }
   function pkgName(p) { return L.PKG[p] ? L.PKG[p].ar : (p || ''); }
@@ -419,6 +419,7 @@
     if (isAdmin() && S.data.reviewsPending) stats += '<a class="card row alert-row" href="#settings/reviews"><div class="main"><div class="name">⭐ ' + S.data.reviewsPending + ' رأي جديد بانتظار موافقتك</div><div class="meta">كتبه عملاؤك من صفحة العميل — راجعه وأظهره أو أخفه</div></div><span class="btn btn-sm">مراجعة</span></a>';
     var tasks =
       section('طلبات جديدة', d.newInquiries, 'quote', 'العرض') +
+      (isAdmin() ? section('وافقوا على العرض — بانتظار العربون', d.accepted || [], null, null, null, 'اطلب العربون ثم «تأكيد واستلام العربون»') : '') +
       section('متابعات اليوم', d.followUps, 'followup', 'متابعة') +
       (isAdmin() ? section('المتبقي المستحق', d.balanceDue, 'balance_reminder', 'تذكير', function (b) { return { amount: b.balance }; }, 'خلال 3 أيام') : '') +
       section('مناسبات الغد', d.tomorrow, 'event_reminder', 'تذكير') +
@@ -477,6 +478,8 @@
       ['المناسبة', b.occasion], ['الباقة', pkgName(b.package) + (b.tier ? ' · فئة ' + b.tier : '')], ['الضيوف', b.guests],
       ['التاريخ', shortDate(b.date) + (b.time ? ' — ' + b.time : '')], ['المكان', b.location || '—'],
       b.package === 'comprehensive' ? ['العشاء', b.dinner || 'لم يُحدد'] : null,
+      b.mapUrl ? ['الخريطة', '<a href="' + esc(b.mapUrl) + '" target="_blank" rel="noopener">فتح الموقع في الخرائط</a>', true] : null,
+      b.serviceTitle ? ['نوع الخدمة', b.serviceTitle + (b.items ? ' · ' + L.parseItems(b.items).length + ' بنود' : '')] : null,
       ['المصدر', b.source], b.code && isAdmin() ? ['كود الخصم', b.code + (Number(b.discount) > 0 ? ' · خصم ' + money(b.discount) : '')] : (b.code ? ['كود الخصم', b.code] : null), ['أُنشئ', stamp(b.created)], b.bookedOn ? ['تاريخ التأكيد', shortDate(b.bookedOn)] : null,
       b.nextFollowUp && L.OPEN.indexOf(b.status) >= 0 ? ['المتابعة القادمة', shortDate(b.nextFollowUp)] : null,
       b.lastContact ? ['آخر تواصل', stamp(b.lastContact)] : null, b.extras ? ['⭐ خدمات إضافية', '<b style="color:var(--gold-ink)">' + esc(b.extras) + '</b>', true] : null, b.notes ? ['ملاحظات', b.notes] : null,
@@ -519,6 +522,7 @@
     shell(b.name, '<div class="card pad"><div class="detail-head"><h2>' + esc(b.name) + '</h2>' + chip(b.status) + '</div>' +
       (used >= max && !booked && !cancelled ? '<div class="msg warn">⚠️ هذا التاريخ مكتمل (' + used + ' من ' + max + ' مناسبات مؤكدة)</div>' : '') +
       '<div class="quick" style="margin:12px 0"><a class="btn btn-sm" href="tel:+' + esc(b.phone) + '">اتصال</a>' +
+      (b.quoteUrl ? '<a class="btn btn-sm" href="' + esc(b.quoteUrl) + '" target="_blank" rel="noopener">صفحة العرض</a><button type="button" class="btn btn-sm" data-act="copyLink" data-link="' + esc(b.quoteUrl) + '">نسخ رابط العرض</button>' : '') +
       '<a class="btn btn-sm btn-wa" href="' + esc(mobile ? 'whatsapp://send?phone=' + b.phone : 'https://api.whatsapp.com/send?phone=' + b.phone) + '"' + (mobile ? '' : ' target="_blank" rel="noopener"') + '>' + IC.wa + 'محادثة</a></div>' +
       '<dl class="kv">' + kv + '</dl></div>' + moneyHtml + (admin ? expensesHtml(b) : '') +
       '<div class="h2">الإجراءات</div><div class="actions">' + A.join('') + '</div>', { back: '#bookings' });
@@ -607,6 +611,10 @@
     if (id && !b) { shell('تعديل', '<div class="card empty">الحجز غير موجود</div>', { back: '#bookings' }); return; }
     var admin = isAdmin(), d = S.data;
     var v = b || { package: 'hospitality', occasion: (d.occasions[0] || {}).ar, time: 'صلاة المغرب' };
+    var tparts = String(v.time || '').split(' · '), tBase = tparts[0], tClock = '';
+    var cm = /(\d{1,2}):(\d{2})\s*(ص|م|AM|PM)?/.exec(tparts[1] || '');
+    if (cm) { var hh = Number(cm[1]) % 12 + (/م|PM/.test(cm[3] || '') ? 12 : 0); tClock = (hh < 10 ? '0' : '') + hh + ':' + cm[2]; }
+    var its = L.parseItems(v.items);
     function opts(list, sel) { return list.map(function (o) { var x = o.ar || o; return '<option value="' + esc(x) + '"' + (x === sel ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join(''); }
     var areaOpts = (b ? '<option value="__keep">بدون تغيير</option>' : '') + '<option value="مسقط">مسقط</option>' +
       d.travel.filter(function (a) { return a.name !== 'مسقط'; }).map(function (a) { return '<option value="' + esc(a.name) + '">' + esc(a.name) + (admin && a.fee ? ' (+' + a.fee + ')' : '') + '</option>'; }).join('') +
@@ -621,9 +629,10 @@
       '<div class="grid2"><div class="field"><label for="f_occ">نوع المناسبة</label><select class="input" id="f_occ">' + opts(d.occasions, v.occasion) + '</select></div>' +
       '<div class="field"><label for="f_guests">عدد الضيوف</label><input class="input" id="f_guests" inputmode="numeric" value="' + esc(v.guests || '') + '"></div></div>' +
       '<div class="grid2"><div class="field"><label for="f_date">التاريخ</label><input class="input" id="f_date" type="date" value="' + esc(v.date || '') + '"><div class="hint" id="capMsg"></div></div>' +
-      '<div class="field"><label for="f_time">الوقت</label><select class="input" id="f_time">' + opts(d.times, v.time) + '</select></div></div>' +
+      '<div class="field"><label for="f_time">الوقت</label><select class="input" id="f_time">' + opts(d.times, tBase) + '</select><input class="input" id="f_clock" type="time" dir="ltr" style="margin-top:6px" value="' + esc(tClock) + '" aria-label="الساعة"></div></div>' +
       '<div class="grid2"><div class="field"><label for="f_area">المنطقة</label><select class="input" id="f_area">' + areaOpts + '</select></div>' +
       '<div class="field"><label for="f_loc">الموقع</label><input class="input" id="f_loc" maxlength="160" value="' + esc(b ? b.location : '') + '" placeholder="المجلس / القاعة / الحي"></div></div>' +
+      '<div class="field"><label for="f_map">رابط الموقع في الخرائط (اختياري)</label><input class="input" id="f_map" dir="ltr" inputmode="url" maxlength="400" placeholder="https://maps.app.goo.gl/…" value="' + esc(v.mapUrl || '') + '"></div>' +
       '<div class="field" id="dinWrap"><label for="f_din">خيار العشاء</label><select class="input" id="f_din"><option value="">لم يُحدد</option>' + opts(L.DINNER, v.dinner) + '</select></div>' +
       (b ? '' : '<div class="field"><label for="f_src">مصدر الطلب</label><select class="input" id="f_src">' + opts(['واتساب', 'اتصال', 'إنستغرام', 'توصية', 'أخرى'], 'واتساب') + '</select></div>') +
       (admin ? '<div class="grid2"><div class="field"><label for="f_custom">سعر خاص (اختياري)</label><input class="input" id="f_custom" inputmode="decimal" placeholder="تلقائي"></div>' +
@@ -631,10 +640,35 @@
       '<div class="field"><label for="f_mk">موافقة العميل على العروض والتسويق</label><select class="input" id="f_mk">' + [['', 'غير محدد'], ['نعم', 'نعم، موافق'], ['لا', 'لا يرغب']].map(function (o) { return '<option value="' + o[0] + '"' + ((v.marketing || '') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
       '<div class="field"><label for="f_extras">خدمات إضافية يطلبها العميل</label><textarea class="input" id="f_extras" maxlength="600" placeholder="اكتبها بالتفصيل">' + esc(v.extras || '') + '</textarea></div>' +
       '<div class="field"><label for="f_notes">ملاحظات</label><textarea class="input" id="f_notes" maxlength="500">' + esc(v.notes || '') + '</textarea></div>' +
+      (admin ? '<details class="svc"' + (v.serviceTitle || its.length ? ' open' : '') + '><summary>تفاصيل الخدمة للفاتورة وعرض السعر (اختياري)</summary>' +
+        '<p class="hint" style="margin:6px 0 10px">اكتب نوع الخدمة ووصفها وبنودها بنفسك لأي مناسبة (شركات، افتتاح، عزاء…). إن أضفت بنودًا يصبح السعر مجموعها، وتظهر كما هي في الفاتورة وصفحة عرض السعر.</p>' +
+        '<div class="field"><label for="f_stitle">نوع الخدمة</label><input class="input" id="f_stitle" maxlength="120" placeholder="مثال: ضيافة حفل افتتاح" value="' + esc(v.serviceTitle || '') + '"></div>' +
+        '<div class="field"><label for="f_sdesc">الوصف</label><textarea class="input" id="f_sdesc" maxlength="600" rows="2" placeholder="ما تشمله الخدمة">' + esc(v.serviceDesc || '') + '</textarea></div>' +
+        '<div class="lbl" style="margin-top:6px">البنود</div><div id="itemsBox"></div>' +
+        '<button type="button" class="btn btn-sm" id="addItem" style="margin-top:6px">+ إضافة بند</button></details>' : '') +
       (admin ? '<div class="price-live" id="livePrice"></div>' : '') +
       '<div id="formMsg"></div><button class="btn btn-dark btn-block" style="margin-top:12px" id="saveBtn">' + (b ? 'حفظ التعديلات' : 'حفظ الطلب') + '</button></form>';
     shell(b ? 'تعديل ' + b.id : 'طلب جديد', body, b ? { back: '#booking/' + encodeURIComponent(b.id) } : null);
 
+    var rowsI = its.length ? its.map(function (x) { return { d: x.d, q: x.q, p: x.p }; }) : [];
+    function drawItems() {
+      if (!$('itemsBox')) return;
+      $('itemsBox').innerHTML = rowsI.length ? rowsI.map(function (r, i) {
+        return '<div class="item-row"><input class="input" data-it="d" data-i="' + i + '" placeholder="البند (مثال: مضيفون)" value="' + esc(r.d) + '">' +
+          '<input class="input" data-it="q" data-i="' + i + '" inputmode="numeric" placeholder="العدد" value="' + esc(r.q) + '">' +
+          '<input class="input" data-it="p" data-i="' + i + '" inputmode="decimal" placeholder="السعر" value="' + esc(r.p) + '">' +
+          '<button type="button" class="x-btn" data-itdel="' + i + '" aria-label="حذف البند">×</button></div>';
+      }).join('') : '<p class="hint" style="margin:0">لا توجد بنود — السعر من جدول الأسعار.</p>';
+    }
+    function itemsNow() { return rowsI.map(function (r) { return { d: String(r.d || '').trim(), q: Number(digits(r.q)) || 1, p: Number(digits(r.p).replace(/[^\d.]/g, '')) || 0 }; }).filter(function (r) { return r.d; }); }
+    drawItems();
+    if ($('itemsBox')) {
+      $('itemsBox').addEventListener('input', function (e) { var t = e.target; if (t.hasAttribute('data-it')) rowsI[Number(t.getAttribute('data-i'))][t.getAttribute('data-it')] = t.value; });
+      $('itemsBox').addEventListener('click', function (e) { var t = e.target.closest('[data-itdel]'); if (!t) return; rowsI.splice(Number(t.getAttribute('data-itdel')), 1); drawItems(); live(); });
+      $('addItem').onclick = function () { rowsI.push({ d: '', q: 1, p: '' }); drawItems(); var l = $('itemsBox').querySelectorAll('[data-it="d"]'); if (l.length) l[l.length - 1].focus(); };
+    }
+    function clockShow() { var t = (d.times || []).filter(function (x) { return x.ar === $('f_time').value; })[0]; $('f_clock').classList.toggle('hidden', !(t && t.clock) && !$('f_clock').value); }
+    $('f_time').addEventListener('change', clockShow); clockShow();
     function cur() {
       var area = $('f_area').value;
       return {
@@ -651,28 +685,33 @@
       if (!admin) return;
       var cfg = { tiers: S.data.tiers, travel: S.data.travel, deposit: Number(S.data.settings.deposit_percent || 50), minGuests: Number(S.data.settings.min_guests || 100), maxGuests: Number(S.data.settings.max_guests || 1000) };
       var area = c.area === '__keep' ? '' : c.area;
-      var q = L.quote(cfg, c.package, c.guests, area), total;
-      if (c.custom) total = Number(c.custom);
+      var occRow = (d.occasions || []).filter(function (o) { return o.ar === $('f_occ').value; })[0];
+      var q = L.quote(cfg, c.package, c.guests, area, occRow), total;
+      var itT = L.itemsTotal(itemsNow());
+      if (itT > 0) total = itT + (c.travel ? Number(c.travel) : (c.area === '__keep' && b ? Number(b.travelFee || 0) : q.travelFee || 0)) - (b && Number(b.discount) > 0 ? Math.min(Number(b.discount), itT) : 0);
+      else if (c.custom) total = Number(c.custom);
       else if (!q.special) total = q.price + (c.travel ? Number(c.travel) : (c.area === '__keep' && b ? Number(b.travelFee || 0) : q.travelFee)) - (b && Number(b.discount) > 0 ? Math.min(Number(b.discount), q.price) : 0);
       $('livePrice').innerHTML = total != null && !isNaN(total)
-        ? '<span>الإجمالي' + (c.custom ? ' (سعر خاص)' : '') + '<br><small>العربون ' + money(L.depositOf(total, cfg.deposit)) + '</small></span><b>' + money(total) + '</b>'
-        : '<span>' + (c.guests ? 'باقة خاصة — أدخل سعرًا خاصًا' : 'أدخل عدد الضيوف') + '</span>';
+        ? '<span>الإجمالي' + (itT > 0 ? ' (مجموع البنود)' : c.custom ? ' (سعر خاص)' : '') + '<br><small>العربون ' + money(L.depositOf(total, cfg.deposit)) + '</small></span><b>' + money(total) + '</b>'
+        : '<span>' + (q.reason === 'occasion' ? 'هذا النوع بعرض سعر خاص — أضف البنود أو سعرًا خاصًا' : c.guests ? 'باقة خاصة — أدخل سعرًا خاصًا أو البنود' : 'أدخل عدد الضيوف أو البنود') + '</span>';
     }
     $('bform').addEventListener('input', live); $('bform').addEventListener('change', live); live();
+    if (admin) $('itemsBox').addEventListener('input', live);
     $('bform').onsubmit = function (e) {
       e.preventDefault();
       var c = cur(), msg = $('formMsg');
       var p = {
         package: c.package, name: $('f_name').value.trim(), phone: digits($('f_phone').value), occasion: $('f_occ').value,
-        guests: c.guests, date: $('f_date').value, time: $('f_time').value, location: $('f_loc').value.trim(),
+        guests: c.guests, date: $('f_date').value, time: $('f_clock').value ? L.clockLabel($('f_time').value, $('f_clock').value) : $('f_time').value, location: $('f_loc').value.trim(), mapUrl: $('f_map').value.trim(),
         dinner: c.package === 'comprehensive' ? $('f_din').value : '', notes: $('f_notes').value, extras: $('f_extras').value, marketing: $('f_mk').value
       };
       if (c.area !== '__keep') p.area = c.area;
       if (!b) p.source = $('f_src').value;
       if (admin && c.custom !== '') p.customTotal = Number(c.custom);
       if (admin && c.travel !== '') p.travelFee = Number(c.travel);
+      if (admin) { p.serviceTitle = $('f_stitle').value.trim(); p.serviceDesc = $('f_sdesc').value.trim(); p.items = itemsNow(); }
       var miss = [];
-      if (!p.name) miss.push('الاسم'); if (!L.validPhone(p.phone)) miss.push('رقم جوال صحيح'); if (!p.date) miss.push('التاريخ'); if (!p.guests) miss.push('عدد الضيوف');
+      if (!p.name) miss.push('الاسم'); if (!L.validPhone(p.phone)) miss.push('رقم جوال صحيح'); if (!p.date) miss.push('التاريخ'); if (!p.guests && !(p.items && p.items.length)) miss.push('عدد الضيوف');
       if (miss.length) { msg.innerHTML = '<div class="msg err">يرجى إكمال: ' + miss.join('، ') + '</div>'; return; }
       if (b && p.area === undefined) { p.location = p.location; }
       var btn = $('saveBtn'); btn.disabled = true; btn.textContent = 'جارٍ الحفظ…';
@@ -804,12 +843,18 @@
       cols: [{ k: 'name', l: 'اسم النموذج', t: 'text', ph: 'مثال: العيد الوطني' }, { k: 'text', l: 'نص الرسالة', t: 'longtext' }],
       blank: { name: '', text: 'كل عام وأنتم بخير {الاسم} 🤍\nتتقدم تبيان للضيافة بأطيب التهاني بمناسبة {المناسبة_العامة}.' }, label: function (r) { return r.name || 'نموذج جديد'; } },
     occasions: { title: 'أنواع المناسبات', add: 'إضافة نوع', empty: '',
-      intro: '«الباقات» تحدد أين يظهر النوع: الكل، أو الضيافة فقط، أو الشاملة فقط.',
-      cols: [{ k: 'ar', l: 'بالعربية', t: 'text' }, { k: 'en', l: 'بالإنجليزية', t: 'text', ltr: 1 }, { k: 'packages', l: 'يظهر في', t: 'enum', o: [['الكل', 'كل الباقات'], ['الضيافة', 'باقة الضيافة فقط'], ['الشاملة', 'الباقة الشاملة فقط']] }],
-      blank: { ar: '', en: '', packages: 'الضيافة' }, label: function (r) { return r.ar || 'نوع جديد'; } },
+      intro: '«يظهر في» يحدد الباقات المتاحة لهذا النوع. «التسعير»: سعر تلقائي من جدول الأسعار (مع نسبة تعديل اختيارية)، أو «عرض سعر خاص» فيرى العميل أنك سترسل له عرضًا، وتكتب أنت البنود والسعر في الحجز.',
+      cols: [{ k: 'ar', l: 'بالعربية', t: 'text' }, { k: 'en', l: 'بالإنجليزية', t: 'text', ltr: 1 }, { k: 'packages', l: 'يظهر في', t: 'enum', o: [['الكل', 'كل الباقات'], ['الضيافة', 'باقة الضيافة فقط'], ['الشاملة', 'الباقة الشاملة فقط']] },
+        { k: 'pricing', l: 'التسعير', t: 'enum', o: [['جدول الأسعار', 'سعر تلقائي من جدول الأسعار'], ['عرض سعر خاص', 'عرض سعر خاص (ترسله أنت)']], half: 1 }, { k: 'adjust', l: 'تعديل سعر الجدول % (اختياري، مثل 20 أو -10)', t: 'text', ltr: 1, half: 1 }],
+      blank: { ar: '', en: '', packages: 'الضيافة', pricing: 'جدول الأسعار', adjust: '' }, label: function (r) { return r.ar || 'نوع جديد'; } },
     times: { title: 'أوقات المناسبات', add: 'إضافة وقت', empty: '',
-      cols: [{ k: 'ar', l: 'بالعربية', t: 'text', half: 1 }, { k: 'en', l: 'بالإنجليزية', t: 'text', ltr: 1, half: 1 }],
-      blank: { ar: '', en: '' }, label: function (r) { return r.ar || 'وقت جديد'; } },
+      intro: 'فعّل «يكتب العميل الساعة» لأوقات مثل صباحًا ومساءً، فيظهر للعميل حقل لكتابة الساعة.',
+      cols: [{ k: 'ar', l: 'بالعربية', t: 'text', half: 1 }, { k: 'en', l: 'بالإنجليزية', t: 'text', ltr: 1, half: 1 }, { k: 'clock', l: 'يكتب العميل الساعة', t: 'bool' }],
+      blank: { ar: '', en: '', clock: false }, label: function (r) { return (r.ar || 'وقت جديد') + (r.clock ? ' 🕒' : ''); } },
+    addons: { title: 'الخدمات الإضافية', add: 'إضافة خدمة', empty: '',
+      intro: 'تظهر للعميل كخيارات يختارها في باقة الضيافة (الباقة الشاملة تشملها، فلا تظهر فيها). لا تُضاف للسعر تلقائيًا؛ تراجعها وتسعّرها أنت.',
+      cols: [{ k: 'active', l: 'متاحة', t: 'bool' }, { k: 'ar', l: 'بالعربية', t: 'text', half: 1 }, { k: 'en', l: 'بالإنجليزية', t: 'text', ltr: 1, half: 1 }, { k: 'packages', l: 'تظهر في', t: 'enum', o: [['الضيافة', 'باقة الضيافة'], ['الكل', 'كل الباقات'], ['الشاملة', 'الباقة الشاملة']] }],
+      blank: { active: true, ar: '', en: '', packages: 'الضيافة' }, label: function (r) { return r.ar || 'خدمة جديدة'; } },
     travel: { title: 'المناطق ورسوم المواصلات', add: 'إضافة منطقة', empty: '',
       intro: 'المناطق خارج مسقط تظهر للعميل في قائمة «المنطقة» لباقة الضيافة، وتُضاف رسومها إلى السعر.',
       cols: [{ k: 'name', l: 'المنطقة / المجلس', t: 'text', half: 1 }, { k: 'fee', l: 'الرسوم (ر.ع)', t: 'money', half: 1 }, { k: 'appliesTo', l: 'تنطبق على', t: 'enum', o: [['باقة الضيافة', 'باقة الضيافة'], ['الكل', 'كل الباقات']] }, { k: 'notes', l: 'ملاحظات', t: 'text' }],
@@ -896,10 +941,10 @@
     mountTable($('ed-' + key), key);
   }
   function viewLists() {
-    subShell('القوائم', ['occasions', 'times', 'travel'].map(function (k) {
+    subShell('القوائم', ['occasions', 'times', 'addons', 'travel'].map(function (k) {
       return '<div class="h2">' + esc(TABLE_UI[k].title) + '</div><div id="ed-' + k + '"><div class="loading">جارٍ التحميل…</div></div>';
     }).join(''));
-    ['occasions', 'times', 'travel'].forEach(function (k) { mountTable($('ed-' + k), k); });
+    ['occasions', 'times', 'addons', 'travel'].forEach(function (k) { mountTable($('ed-' + k), k); });
   }
 
   /** يرسم محرر جدول داخل عنصر، ويحفظ الجدول كاملًا عند «حفظ» */
@@ -1067,7 +1112,7 @@
       f('refund_window_days', 'مدة استرداد العربون (أيام)', 'num') + f('max_events_per_day', 'أقصى مناسبات في اليوم', 'num') + f('followup_days', 'المتابعة بعد العرض (أيام)', 'num') +
       f('min_guests', 'أقل عدد ضيوف للأسعار', 'num') + '</div>' + f('max_guests', 'أكبر عدد ضيوف للأسعار', 'num') +
       f('comprehensive_areas', 'مناطق الباقة الشاملة (افصل بفاصلة)', '', 'الباقة الشاملة لا تظهر إلا لهذه المناطق. الافتراضي: مسقط') + '</div>' +
-      '<div class="h2">التواصل</div><div class="card pad">' + f('whatsapp', 'رقم واتساب العمل', 'ltr') + f('instagram', 'رابط إنستغرام', 'ltr') + f('review_url', 'رابط تقييم Google', 'ltr', 'يُضاف تلقائيًا في آخر رسالة الشكر بعد المناسبة. من Google Maps: افتح نشاطك ← «طلب مراجعات» أو «مشاركة» وانسخ الرابط.') +f('summary_emails', 'إيميلات الملخص اليومي (افصل بفاصلة)', 'ltr') + '</div>' +
+      '<div class="h2">التواصل</div><div class="card pad">' + f('whatsapp', 'رقم واتساب العمل', 'ltr') + f('phone', 'رقم الاتصال (يظهر للعميل أعلى الصفحة)', 'ltr', 'اتركه فارغًا ليكون نفس رقم الواتساب.') + f('instagram', 'رابط إنستغرام', 'ltr') + f('review_url', 'رابط تقييم Google', 'ltr', 'يُضاف تلقائيًا في آخر رسالة الشكر بعد المناسبة. من Google Maps: افتح نشاطك ← «طلب مراجعات» أو «مشاركة» وانسخ الرابط.') +f('summary_emails', 'إيميلات الملخص اليومي (افصل بفاصلة)', 'ltr') + '</div>' +
       '<div class="h2">نص الموافقة في صفحة العميل</div><div class="card pad">' + f('consent_text_ar', 'موافقة التواصل (إلزامية) — بالعربية', 'area') + f('consent_text_en', 'موافقة التواصل — بالإنجليزية', 'area') +
         f('marketing_text_ar', 'موافقة التسويق (اختيارية) — بالعربية', 'area') + f('marketing_text_en', 'موافقة التسويق — بالإنجليزية', 'area') + '</div>' +
       '<div class="h2">شروط الحجز</div><div class="card pad">' + f('terms_ar', 'بالعربية (كل سطر شرط)', 'area') + f('terms_en', 'بالإنجليزية', 'area') + '</div>' +

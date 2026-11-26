@@ -31,16 +31,21 @@ window.TIBIAN = {
       { from: 901, to: 1000, hosts: 30, supervisors: 3, jars: 18, hospitality: 370, comprehensive: 2240 }
     ],
     occasions: [
-      { ar: 'عقد قران / ملكة', en: 'Wedding contract (Milka)', packages: 'الكل' },
-      { ar: 'مناسبة خاصة في منزل أو مزرعة', en: 'Private event at a home or farm', packages: 'الضيافة' },
-      { ar: 'حفل لمؤسسة أو شركة', en: 'Company or organization event', packages: 'الضيافة' },
-      { ar: 'افتتاح مشروع', en: 'Business opening', packages: 'الضيافة' },
-      { ar: 'عزاء', en: 'Condolence', packages: 'الضيافة' },
-      { ar: 'أخرى', en: 'Other', packages: 'الضيافة' }
+      { ar: 'عقد قران / ملكة', en: 'Wedding contract (Milka)', packages: 'الكل', pricing: 'جدول الأسعار' },
+      { ar: 'مناسبة خاصة في منزل أو مزرعة', en: 'Private event at a home or farm', packages: 'الضيافة', pricing: 'جدول الأسعار' },
+      { ar: 'حفل لمؤسسة أو شركة', en: 'Company or organization event', packages: 'الضيافة', pricing: 'عرض سعر خاص' },
+      { ar: 'افتتاح مشروع', en: 'Business opening', packages: 'الضيافة', pricing: 'عرض سعر خاص' },
+      { ar: 'عزاء', en: 'Condolence', packages: 'الضيافة', pricing: 'جدول الأسعار' },
+      { ar: 'أخرى', en: 'Other', packages: 'الضيافة', pricing: 'عرض سعر خاص' }
     ],
     times: [
       { ar: 'صلاة الظهر', en: 'Dhuhr prayer' }, { ar: 'صلاة العصر', en: 'Asr prayer' },
-      { ar: 'صلاة المغرب', en: 'Maghrib prayer' }, { ar: 'صلاة العشاء', en: 'Isha prayer' }
+      { ar: 'صلاة المغرب', en: 'Maghrib prayer' }, { ar: 'صلاة العشاء', en: 'Isha prayer' },
+      { ar: 'صباحًا', en: 'Morning', clock: true }, { ar: 'مساءً', en: 'Evening', clock: true }
+    ],
+    addons: [
+      { ar: 'الحلوى', en: 'Omani sweets', packages: 'الضيافة' }, { ar: 'التصوير', en: 'Photography', packages: 'الضيافة' },
+      { ar: 'وجبة العشاء', en: 'Dinner', packages: 'الضيافة' }, { ar: 'تجهيز المعرس', en: 'Groom preparation', packages: 'الضيافة' }
     ],
     travel: [{ name: 'مسقط', fee: 0, appliesTo: 'الكل' }],
     fullDates: [],
